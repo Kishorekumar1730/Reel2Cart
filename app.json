@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Reel2Cart",
+    "slug": "Reel2Cart",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "cover",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "usesCleartextTraffic": true
+    },
+    "web": {},
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-video"
+    ]
+  }
+}
