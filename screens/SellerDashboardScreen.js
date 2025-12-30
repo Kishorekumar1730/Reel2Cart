@@ -30,8 +30,9 @@ const SellerDashboardScreen = () => {
     const [stats, setStats] = useState({ products: 0, earnings: 0, orders: 0, views: 0 });
     const [products, setProducts] = useState([]);
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = async (showLoading = false) => {
         try {
+            if (showLoading) setLoading(true);
             const userStr = await AsyncStorage.getItem("userInfo");
             if (!userStr) return;
             const user = JSON.parse(userStr);
@@ -53,14 +54,21 @@ const SellerDashboardScreen = () => {
         } catch (error) {
             console.error(error);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
             setRefreshing(false);
         }
     };
 
     useFocusEffect(
         useCallback(() => {
-            fetchDashboardData();
+            fetchDashboardData(true); // Initial load with spinner if first time
+
+            // Silent poll every 10 seconds for real-time stats (Orders, Earnings, etc.)
+            const interval = setInterval(() => {
+                fetchDashboardData(false);
+            }, 10000);
+
+            return () => clearInterval(interval);
         }, [])
     );
 
@@ -259,6 +267,13 @@ const SellerDashboardScreen = () => {
                 {/* Quick Actions */}
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
                 <View style={[styles.actionsContainer, { flexWrap: 'wrap' }]}>
+                    <TouchableOpacity style={[styles.actionBtn, { marginBottom: 15 }]} onPress={() => navigation.navigate('ChatList')}>
+                        <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
+                            <Ionicons name="chatbubbles-outline" size={28} color="#1E88E5" />
+                        </View>
+                        <Text style={styles.actionText}>Messages</Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity style={[styles.actionBtn, { marginBottom: 15 }]} onPress={() => navigation.navigate('AddProduct', { sellerId, mode: 'product' })}>
                         <View style={[styles.actionIcon, { backgroundColor: '#FFEBEE' }]}>
                             <Ionicons name="cube-outline" size={28} color="#E50914" />

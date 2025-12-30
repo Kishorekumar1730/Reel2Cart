@@ -168,6 +168,40 @@ const CartScreen = () => {
         });
     };
 
+
+    // Guest View
+    const [isGuest, setIsGuest] = useState(false);
+    useEffect(() => {
+        const checkGuest = async () => {
+            const stored = await AsyncStorage.getItem("userInfo");
+            if (stored) {
+                const u = JSON.parse(stored);
+                if (u.isGuest) setIsGuest(true);
+            }
+        };
+        checkGuest();
+    }, []);
+
+    if (isGuest) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <LinearGradient colors={["#E50914", "#B20710"]} style={styles.header}>
+                    <View style={styles.headerContent}>
+                        <Text style={styles.headerTitle}>{t('cartTab') || "Cart"}</Text>
+                        <Ionicons name="cart-outline" size={28} color="#fff" />
+                    </View>
+                </LinearGradient>
+                <View style={styles.emptyContainer}>
+                    <Ionicons name="cart-outline" size={80} color="#ccc" />
+                    <Text style={styles.emptyText}>Sign in to view your cart</Text>
+                    <AnimatedButton onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })} style={styles.shopNowBtn}>
+                        <Text style={styles.shopNowText}>Sign In / Join</Text>
+                    </AnimatedButton>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.safeArea}>
             {/* Header */}

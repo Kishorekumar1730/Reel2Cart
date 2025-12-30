@@ -130,7 +130,7 @@ const RegisterScreen = () => {
               </AnimatedButton>
             </View>
 
-            <Text style={styles.footerText}>© 2025, Reel2Cart, Internvita 2.0, P01</Text>
+            <Text style={styles.footerText}>© 2025, Reel2Cart</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

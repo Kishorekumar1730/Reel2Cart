@@ -88,6 +88,11 @@ const productSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    country: {
+        type: String,
+        default: 'Global',
+        index: true
+    }
 });
 
 module.exports = mongoose.model("Product", productSchema);

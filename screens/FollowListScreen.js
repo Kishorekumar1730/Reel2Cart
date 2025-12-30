@@ -96,7 +96,8 @@ const FollowListScreen = () => {
         // Seller Following -> Shows Users/Sellers
 
         const image = item.profileImage;
-        const name = item.businessName || item.name || item.sellerName;
+        // Prioritize 'name' if it exists (User), else businessName (Seller)
+        const name = item.name || item.businessName || "Unknown User";
         const subtext = item.businessName ? 'Seller' : 'User';
 
         return (

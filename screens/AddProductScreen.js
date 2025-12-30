@@ -71,6 +71,8 @@ const AddProductScreen = () => {
     const [stock, setStock] = useState(product?.stock?.toString() || '1');
     const [images, setImages] = useState(product?.images || []);
     const [videoUrl, setVideoUrl] = useState(product?.videoUrl || '');
+    // Default country to Global if not set
+    const [country, setCountry] = useState(product?.country || 'Global');
     const [loading, setLoading] = useState(false);
 
     const pickImage = async () => {
@@ -191,6 +193,9 @@ const AddProductScreen = () => {
                 stock: parseInt(stock),
                 images,
                 videoUrl: finalVideoUrl,
+                images,
+                videoUrl: finalVideoUrl,
+                country: country, // Crucial for regional algorithm
             };
 
             let url = `${API_BASE_URL}/products/add`;
@@ -368,7 +373,18 @@ const AddProductScreen = () => {
                             />
                         </View>
                         {/* Space for future field */}
-                        <View style={styles.halfInput} />
+                        <View style={styles.halfInput}>
+                            <Text style={styles.label}>Country / Region</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={country}
+                                onChangeText={setCountry}
+                                placeholder="e.g. India, USA, Global"
+                            />
+                            <Text style={{ fontSize: 10, color: '#999', marginTop: -12, marginBottom: 10 }}>
+                                Leave 'Global' for worldwide visibility
+                            </Text>
+                        </View>
                     </View>
                 </View>
 

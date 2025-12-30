@@ -216,7 +216,22 @@ const SellerProfileScreen = () => {
                         </TouchableOpacity>
                     )}
 
-                    <TouchableOpacity style={styles.messageBtn}>
+                    <TouchableOpacity
+                        style={styles.messageBtn}
+                        onPress={() => {
+                            if (!currentUserId) {
+                                alert("Please login to message sellers");
+                                return;
+                            }
+                            // Ensure we have a valid receiver ID. 
+                            // If userId is populated object, use _id. If string, use it.
+                            const recId = (seller.userId && seller.userId._id) ? seller.userId._id : seller.userId;
+                            navigation.navigate("Chat", {
+                                receiverId: recId,
+                                receiverName: seller.businessName
+                            });
+                        }}
+                    >
                         <Text style={styles.messageBtnText}>Message</Text>
                     </TouchableOpacity>
                 </View>

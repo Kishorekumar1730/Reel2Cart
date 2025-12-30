@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Image, FlatList, TouchableOpacity, Dimensions, Platform, StatusBar, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Image, FlatList, TouchableOpacity, Dimensions, Platform, StatusBar, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import AnimatedButton from '../components/AnimatedButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,8 +10,72 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useLanguage } from '../context/LanguageContext';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location'; // Add Location
 
-const { width } = Dimensions.get('window');
+
+
+const { width, height } = Dimensions.get('window');
+
+const ALL_COUNTRIES = [
+    { code: 'Global', name: 'Global Store', flag: '🌍' },
+    { code: 'AF', name: 'Afghanistan', flag: '🇦🇫' },
+    { code: 'AL', name: 'Albania', flag: '🇦🇱' },
+    { code: 'DZ', name: 'Algeria', flag: '🇩🇿' },
+    { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+    { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+    { code: 'AT', name: 'Austria', flag: '🇦🇹' },
+    { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+    { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
+    { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+    { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+    { code: 'CN', name: 'China', flag: '🇨🇳' },
+    { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
+    { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
+    { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
+    { code: 'FI', name: 'Finland', flag: '🇫🇮' },
+    { code: 'FR', name: 'France', flag: '🇫🇷' },
+    { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+    { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
+    { code: 'GR', name: 'Greece', flag: '🇬🇷' },
+    { code: 'IN', name: 'India', flag: '🇮🇳' },
+    { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+    { code: 'IR', name: 'Iran', flag: '🇮🇷' },
+    { code: 'IQ', name: 'Iraq', flag: '🇮🇶' },
+    { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
+    { code: 'IL', name: 'Israel', flag: '🇮🇱' },
+    { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+    { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+    { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
+    { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
+    { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+    { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
+    { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
+    { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
+    { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
+    { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+    { code: 'NO', name: 'Norway', flag: '🇳🇴' },
+    { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+    { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
+    { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+    { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+    { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
+    { code: 'RU', name: 'Russia', flag: '🇷🇺' },
+    { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
+    { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+    { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
+    { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+    { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+    { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
+    { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
+    { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
+    { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+    { code: 'TR', name: 'Turkey', flag: '🇹🇷' },
+    { code: 'UA', name: 'Ukraine', flag: '🇺🇦' },
+    { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
+    { code: 'UK', name: 'United Kingdom', flag: '🇬🇧' },
+    { code: 'USA', name: 'United States', flag: '🇺🇸' },
+    { code: 'VN', name: 'Vietnam', flag: '🇻🇳' }
+];
 
 const CATEGORIES = [
     { id: 0, key: 'All', icon: 'grid-outline' },
@@ -38,7 +102,18 @@ const HomeScreen = ({ navigation }) => {
     const [searchLoading, setSearchLoading] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
 
-    // Fetch Address
+    // Location State
+    // Location State
+    const [country, setCountry] = useState({ code: 'Global', name: 'Global Store', flag: '🌍' });
+    const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
+    const [countrySearch, setCountrySearch] = useState(''); // New search state
+
+    // Filtered Countries
+    const filteredCountries = ALL_COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(countrySearch.toLowerCase())
+    );
+
+    // Fetch Address (Existing)
     const fetchAddress = async () => {
         try {
             const storedUserInfo = await AsyncStorage.getItem("userInfo");
@@ -55,19 +130,28 @@ const HomeScreen = ({ navigation }) => {
 
     // Fetch Data
     const fetchData = async (category = 'All') => {
-        // Only show full loading on initial load or category change, not pull-to-refresh
         if (!refreshing) setLoading(true);
 
         try {
-            // 1. Fetch Products (Filtered)
-            const prodUrl = category === 'All'
-                ? `${API_BASE_URL}/products?limit=20`
-                : `${API_BASE_URL}/products?category=${category}`;
+            // Apply Country Filter
+            // We pass the country NAME (e.g. 'India') because that's likely what we save in DB?
+            // Wait, AddProduct used 'India' from manual input? Or did I add a dropdown?
+            // In AddProduct I added a text input "e.g. India".
+            // So if user typed "India", backend has "India".
+            // Here my country.code is 'IN' for India.
+            // So I MUST pass country.name (e.g. 'India').
+            // Exception: For Global, my object is { code: 'Global', name: 'Global Store' }.
+            // Strict check: if code is 'Global', use 'Global'. Else use country.name.
+            const countryFilter = country.code === 'Global' ? 'Global' : country.name;
+
+            let prodUrl = `${API_BASE_URL}/products?country=${countryFilter}`;
+            if (category !== 'All') prodUrl += `&category=${category}`;
+            prodUrl += '&limit=20';
 
             const [prodRes, offerRes, reelRes] = await Promise.all([
                 fetch(prodUrl),
-                fetch(`${API_BASE_URL}/offers`), // Fetch Admin Offers
-                fetch(`${API_BASE_URL}/products/reels`)
+                fetch(`${API_BASE_URL}/offers`),
+                fetch(`${API_BASE_URL}/products/reels?country=${countryFilter}`) // Added country filter to reels
             ]);
 
             const prodData = await prodRes.json();
@@ -236,14 +320,70 @@ const HomeScreen = ({ navigation }) => {
                 if (storedUserInfo) {
                     const user = JSON.parse(storedUserInfo);
                     setUserId(user._id);
-                    fetchAddress(); // Existing fetch
+                    fetchAddress();
                     fetchWishlist(user._id);
                 }
+                // TRIGGER DATA FETCH WHEN SCREEN IS FOCUSED OR COUNTRY CHANGES
+                fetchData(activeCategory);
             };
             init();
-            fetchData(activeCategory);
-        }, [activeCategory])
+
+        }, [activeCategory, country]) // Re-fetch when country changes
     );
+
+    // Initial Country Detection (Once)
+    useEffect(() => {
+        const detectLocation = async () => {
+            // Check if user already manually selected a country
+            const savedCountry = await AsyncStorage.getItem("userSelectedCountry");
+            if (savedCountry) {
+                setCountry(JSON.parse(savedCountry));
+                return;
+            }
+
+            // Else Auto-Detect
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                    let loc = await Location.getCurrentPositionAsync({});
+                    let region = await Location.reverseGeocodeAsync({
+                        latitude: loc.coords.latitude,
+                        longitude: loc.coords.longitude
+                    });
+
+                    if (region && region.length > 0) {
+                        const detectedName = region[0].country; // e.g. "India"
+                        // Find match in our list or default to Global
+                        // Try matching by name first, then by ISO code if available
+                        const match = ALL_COUNTRIES.find(c =>
+                            c.name.toLowerCase() === detectedName?.toLowerCase() ||
+                            c.code === region[0].isoCountryCode
+                        );
+                        if (match) {
+                            setCountry(match);
+                        }
+                    }
+                }
+            } catch (e) { console.log(e); }
+        };
+        detectLocation();
+    }, []);
+
+
+    const handleCountrySelect = async (item) => {
+        setCountry(item);
+        setIsCountryModalVisible(false);
+        await AsyncStorage.setItem("userSelectedCountry", JSON.stringify(item));
+
+        // Update User Profile location on backend if logged in
+        if (userId) {
+            fetch(`${API_BASE_URL}/user/location`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, country: item.code })
+            });
+        }
+    };
 
     const toggleWishlist = async (item) => {
         if (!userId) {
@@ -430,8 +570,12 @@ const HomeScreen = ({ navigation }) => {
 
             {/* Header */}
             {/* Header with Search */}
+            {/* Header with Search & Region */}
+            {/* Header with Search & Region */}
             <LinearGradient colors={['#131921', '#232f3e']} style={styles.header}>
-                <View style={styles.searchContainer}>
+                <View style={styles.searchRow}>
+
+                    {/* Search Bar */}
                     <View style={styles.searchBar}>
                         <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
                         <TextInput
@@ -452,19 +596,31 @@ const HomeScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         )}
                     </View>
+
+                    {/* Region Selector (Right Side) */}
+                    <TouchableOpacity style={styles.regionSelector} onPress={() => setIsCountryModalVisible(true)}>
+                        <Text style={{ fontSize: 18 }}>{country.flag}</Text>
+                        <Text style={{ fontSize: 12, color: '#fff', fontWeight: 'bold', marginHorizontal: 2 }}>
+                            {country.code === 'Global' ? 'GL' : country.code}
+                        </Text>
+                        <Ionicons name="caret-down" size={10} color="#ccc" />
+                    </TouchableOpacity>
+
                 </View>
             </LinearGradient>
 
-            {/* Location Bar */}
-            <AnimatedButton style={styles.locationBar} onPress={() => navigation.navigate("Address")}>
+            {/* Address Bar (Separate) */}
+            <AnimatedButton style={styles.addressBar} onPress={() => navigation.navigate("Address")}>
                 <Ionicons name="location-outline" size={18} color="#333" />
-                <Text style={styles.locationText} numberOfLines={1}>
-                    {selectedAddress
-                        ? `Deliver to ${selectedAddress.name} - ${selectedAddress.city} ${selectedAddress.postalCode}`
-                        : "Select a location to see local availability"
-                    }
-                </Text>
-                <Ionicons name="chevron-down" size={16} color="#333" />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.addressText} numberOfLines={1}>
+                        {selectedAddress
+                            ? `Deliver to ${selectedAddress.name} - ${selectedAddress.city} ${selectedAddress.postalCode}`
+                            : "Select a location to see local availability"
+                        }
+                    </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#333" />
             </AnimatedButton>
 
             <ScrollView
@@ -555,7 +711,22 @@ const HomeScreen = ({ navigation }) => {
                             </View>
 
                             {products.length === 0 ? (
-                                <Text style={styles.emptyText}>No products found in this category.</Text>
+                                <View style={styles.emptyContainer}>
+                                    <Image
+                                        source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4076/4076432.png' }}
+                                        style={styles.emptyImage}
+                                    />
+                                    <Text style={styles.emptyTitle}>No items in {country.name}</Text>
+                                    <Text style={styles.emptySubTitle}>
+                                        We couldn't find any products or reels in this region yet.
+                                    </Text>
+                                    <TouchableOpacity
+                                        style={styles.globalButton}
+                                        onPress={() => setCountry({ code: 'Global', name: 'Global Store', flag: '🌍' })}
+                                    >
+                                        <Text style={styles.globalButtonText}>Switch to Global Store 🌍</Text>
+                                    </TouchableOpacity>
+                                </View>
                             ) : (
                                 <View style={styles.productGrid}>
                                     {products.map((item) => (
@@ -568,6 +739,68 @@ const HomeScreen = ({ navigation }) => {
                 )}
 
             </ScrollView>
+
+            {/* Country Selector Modal */}
+            <Modal
+                visible={isCountryModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setIsCountryModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Region</Text>
+                            <TouchableOpacity onPress={() => setIsCountryModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Country Search Bar */}
+                        <View style={styles.countrySearchContainer}>
+                            <Ionicons name="search" size={20} color="#999" style={{ marginRight: 8 }} />
+                            <TextInput
+                                placeholder="Search Country..."
+                                style={styles.countrySearchInput}
+                                value={countrySearch}
+                                onChangeText={setCountrySearch}
+                                autoCorrect={false}
+                            />
+                        </View>
+
+                        <FlatList
+                            data={filteredCountries}
+                            keyExtractor={item => item.code}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[styles.countryItem, country.code === item.code && styles.selectedCountry]}
+                                    onPress={() => handleCountrySelect(item)}
+                                >
+                                    <Text style={styles.countryFlag}>{item.flag}</Text>
+                                    <Text style={[styles.countryName, country.code === item.code && { fontWeight: 'bold', color: '#E50914' }]}>
+                                        {item.name}
+                                    </Text>
+                                    {country.code === item.code && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </View>
+            </Modal>
+            {/* AI Assistant FAB */}
+            <TouchableOpacity
+                style={styles.aiFab}
+                onPress={() => navigation.navigate('AIChat')}
+                activeOpacity={0.8}
+            >
+                <LinearGradient
+                    colors={['#E50914', '#b81c26']}
+                    style={styles.aiFabGradient}
+                >
+                    <Ionicons name="sparkles" size={24} color="#fff" />
+                </LinearGradient>
+            </TouchableOpacity>
+
         </SafeAreaView>
     );
 };
@@ -584,10 +817,22 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'android' ? hp(1) : 0,
         paddingHorizontal: wp(4),
     },
-    searchContainer: {
+    searchRow: {
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: hp(1),
+    },
+    regionSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 10, // Moved to left margin
+        backgroundColor: '#3a4a5e',
+        paddingHorizontal: 6,
+        paddingVertical: 8, // Taller to match search bar height approx
+        height: 45,
+        borderRadius: 5,
+        borderWidth: 1,
+        borderColor: '#555'
     },
     searchBar: {
         flex: 1,
@@ -604,22 +849,32 @@ const styles = StyleSheet.create({
         fontSize: normalize(15),
         color: '#000',
     },
-    micButton: {
-        marginLeft: 12,
-    },
-    locationBar: {
-        backgroundColor: '#b5e0d4', // Slightly custom blue-ish green
+    addressBar: {
+        backgroundColor: '#b5e0d4',
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: wp(4),
-        paddingVertical: 10,
+        paddingVertical: 12, // slightly taller for readability
+        borderBottomWidth: 1,
+        borderBottomColor: '#a0cbbf'
     },
-    locationText: {
-        flex: 1,
+    addressText: {
         fontSize: normalize(13),
-        color: '#333',
-        marginLeft: 8,
+        color: '#000',
         fontWeight: '500',
+    },
+    togglePill: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: '#ddd'
+    },
+    toggleText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#E50914'
     },
     scrollContent: {
         paddingBottom: hp(10), // Space for bottom tab
@@ -799,31 +1054,67 @@ const styles = StyleSheet.create({
     ratingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 8,
     },
     ratingText: {
-        fontSize: normalize(11),
-        color: '#007600', // Amazon-ish green for count/rating
+        fontSize: normalize(10),
+        color: '#555',
         marginLeft: 4,
     },
     priceRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 5
     },
     productPrice: {
-        fontSize: normalize(16),
+        fontSize: normalize(14),
         fontWeight: 'bold',
         color: '#000',
     },
     addToCartBtn: {
-        backgroundColor: '#F7CA00', // Amazon yellow button
-        borderRadius: 20,
-        width: 30,
-        height: 30,
-        justifyContent: 'center',
+        backgroundColor: '#F3A847', // Amazon Add to Cart Yellow
+        borderRadius: 4,
+        padding: 4,
+    },
+    // Modal Styles
+    modalOverlay: {
+        position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+        zIndex: 1000,
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: '60%',
+    },
+    modalHeader: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 10
+    },
+    modalTitle: { fontSize: 18, fontWeight: 'bold' },
+    countryItem: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f9f9f9'
+    },
+    selectedCountry: { backgroundColor: '#f0f8ff' },
+    countryFlag: { fontSize: 24, marginRight: 15 },
+    countryName: { fontSize: 16, flex: 1, color: '#333' },
+    countrySearchContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        height: 40,
+        marginBottom: 10
+    },
+    countrySearchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: '#333'
     },
     emptyText: {
         textAlign: 'center',
@@ -844,5 +1135,62 @@ const styles = StyleSheet.create({
         marginTop: 10,
         color: '#999',
         fontSize: normalize(12)
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 50,
+        paddingHorizontal: 20
+    },
+    emptyImage: {
+        width: 100,
+        height: 100,
+        marginBottom: 20,
+        opacity: 0.5
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10
+    },
+    emptySubTitle: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 20
+    },
+    globalButton: {
+        backgroundColor: '#E50914',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 25,
+        elevation: 3
+    },
+    globalButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14
+    },
+    aiFab: {
+        position: 'absolute',
+        bottom: 25,
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        zIndex: 1000
+    },
+    aiFabGradient: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center'
     }
 });

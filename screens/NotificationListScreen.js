@@ -7,41 +7,38 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { normalize, wp, hp } from '../utils/responsive';
 
+import { useNotifications } from '../context/NotificationContext';
+
 const NotificationListScreen = ({ navigation }) => {
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { notifications, loading, fetchNotifications, markAllAsRead } = useNotifications();
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchNotifications = async () => {
-        try {
-            const storedUser = await AsyncStorage.getItem("userInfo");
-            if (!storedUser) return;
-            const user = JSON.parse(storedUser);
-
-            const response = await fetch(`${API_BASE_URL}/notifications/${user._id}`);
-            const data = await response.json();
-
-            if (response.ok) {
-                setNotifications(data);
-            }
-        } catch (error) {
-            console.error("Error fetching notifications:", error);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchNotifications();
+        setRefreshing(false);
     };
 
     useFocusEffect(
         useCallback(() => {
             fetchNotifications();
-        }, [])
+        }, [fetchNotifications])
     );
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchNotifications();
+    const handlePress = (item) => {
+        if (item.relatedId && (item.type === 'order_update' || item.type === 'new_order')) {
+            // If seller -> Seller Dashboard? For now both go to order details or dashboard
+            // Wait, we don't have a single Order Details screen that fits both perfectly yet, 
+            // but let's assume OrderDetailScreen for now.
+            // Or if it's "new_order" and user is seller, maybe go to SellerOrders?
+            if (item.type === 'new_order') {
+                navigation.navigate('SellerDashboard');
+            } else {
+                navigation.navigate('OrderDetail', { orderId: item.relatedId });
+            }
+        }
     };
+
 
     const getIcon = (type) => {
         switch (type) {
@@ -64,7 +61,7 @@ const NotificationListScreen = ({ navigation }) => {
     };
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity style={styles.card}>
+        <TouchableOpacity style={styles.card} onPress={() => handlePress(item)}>
             <View style={[styles.iconContainer, { backgroundColor: getColor(item.type) + '20' }]}>
                 <Ionicons name={getIcon(item.type)} size={24} color={getColor(item.type)} />
             </View>
@@ -87,8 +84,8 @@ const NotificationListScreen = ({ navigation }) => {
                     <Ionicons name="arrow-back" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('NotificationSettings')} style={styles.settingsBtn}>
-                    <Ionicons name="settings-outline" size={24} color="#333" />
+                <TouchableOpacity onPress={markAllAsRead} style={styles.settingsBtn}>
+                    <Ionicons name="checkmark-done-circle-outline" size={26} color="#E50914" />
                 </TouchableOpacity>
             </View>
 

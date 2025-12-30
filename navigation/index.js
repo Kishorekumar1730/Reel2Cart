@@ -32,7 +32,7 @@ import {
   SellerAnalyticsScreen,
   SellerSupportScreen,
   SellerPromoteScreen,
-  AdminDashboardScreen, // Add this
+  AdminDashboardScreen,
   HelpScreen,
   SellerProfileScreen,
   FollowListScreen,
@@ -40,7 +40,12 @@ import {
   LoginSecurityScreen,
   NotificationSettingsScreen,
   NotificationListScreen,
+  DeliveryDashboardScreen,
 } from "../screens";
+
+import ChatScreen from "../screens/ChatScreen";
+import ChatListScreen from "../screens/ChatListScreen";
+import AIChatScreen from "../screens/AIChatScreen";
 
 import { useLanguage } from "../context/LanguageContext";
 
@@ -103,20 +108,20 @@ const BottomTabNavigator = () => {
           if (route.name === 'Reels') return null;
 
           let label = route.name;
-          if (route.name === 'HomeTab') label = t('homeTab');
-          else if (route.name === 'Cart') label = t('cartTab');
-          else if (route.name === 'Favourite') label = t('favouriteTab');
-          else if (route.name === 'Profile') label = t('profileTab');
+          if (route.name === 'HomeTab') label = t('homeTab') || 'Home';
+          else if (route.name === 'Cart') label = t('cartTab') || 'Cart';
+          else if (route.name === 'Favourite') label = t('favouriteTab') || 'Wishlist';
+          else if (route.name === 'Profile') label = t('profileTab') || 'Profile';
 
           return <Text style={{ color, fontSize: 10, paddingBottom: 5 }}>{label}</Text>;
         }
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: t('homeTab') }} />
-      <Tab.Screen name="Cart" component={CartScreen} options={{ title: t('cartTab') }} />
-      <Tab.Screen name="Reels" component={ReelsScreen} options={{ title: t('reelsTab') }} />
-      <Tab.Screen name="Favourite" component={FavouriteScreen} options={{ title: t('favouriteTab') }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('profileTab') }} />
+      <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="Cart" component={CartScreen} options={{ title: 'Cart' }} />
+      <Tab.Screen name="Reels" component={ReelsScreen} />
+      <Tab.Screen name="Favourite" component={FavouriteScreen} options={{ title: 'Wishlist' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 };
@@ -126,36 +131,12 @@ const MainNavigator = () => {
   return (
     <NavigationContainer>
       <RootStack.Navigator initialRouteName="Splash">
-        <RootStack.Screen
-          name="Splash"
-          component={SplashScreen}
-          options={{ headerShown: false }} // Hide header for splash screen
-        />
-        <RootStack.Screen
-          name="Language"
-          component={LanguageScreen}
-          options={{ headerShown: false }} // Hide header for language selection screen
-        />
-        <RootStack.Screen
-          name="Open"
-          component={OpenScreen}
-          options={{ headerShown: false }} // Hide header for open screen
-        />
-        <RootStack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }} // Hide header for login screen
-        />
-        <RootStack.Screen
-          name="Register"
-          component={RegisterScreen}
-          options={{ headerShown: false }} // Hide header for register screen
-        />
-        <RootStack.Screen
-          name="VerifySignup"
-          component={VerifyScreenSignup}
-          options={{ headerShown: false }} // Hide header for verify signup screen
-        />
+        <RootStack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Language" component={LanguageScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Open" component={OpenScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="VerifySignup" component={VerifyScreenSignup} options={{ headerShown: false }} />
         <RootStack.Screen
           name="LoginSignup"
           component={LoginScreen}
@@ -164,136 +145,42 @@ const MainNavigator = () => {
             headerTitleAlign: 'center',
             headerStyle: { backgroundColor: '#f4511e' },
             headerTintColor: '#fff',
-            headerLeft: () => (
-              <Ionicons name="arrow-back" size={24} color="white" style={{ marginLeft: 10 }} />
-            ),
           }}
         />
-        <RootStack.Screen
-          name="Welcome"
-          component={WelcomeScreen}
-          options={{ headerShown: false }} // Hide header for welcome screen
-        />
-        <RootStack.Screen
-          name="Home"
-          component={BottomTabNavigator}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="Address"
-          component={AddressScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="EditProfile"
-          component={EditProfileScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="Payment"
-          component={PaymentScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="PaymentMethod"
-          component={PaymentMethodScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="Orders"
-          component={OrdersScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="OrderDetail"
-          component={OrderDetailScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerOnboarding"
-          component={SellerOnboardingScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerRegistration"
-          component={SellerRegistrationScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerDashboard"
-          component={SellerDashboardScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="AddProduct"
-          component={AddProductScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="EditSellerProfile"
-          component={EditSellerProfileScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerOrders"
-          component={SellerOrdersScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerAnalytics"
-          component={SellerAnalyticsScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerSupport"
-          component={SellerSupportScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerPromote"
-          component={SellerPromoteScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="AdminDashboard"
-          component={AdminDashboardScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="Help"
-          component={HelpScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="SellerProfile"
-          component={SellerProfileScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="FollowList"
-          component={FollowListScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="ProductDetails"
-          component={ProductDetailsScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="LoginSecurity"
-          component={LoginSecurityScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="NotificationSettings"
-          component={NotificationSettingsScreen}
-          options={{ headerShown: false }}
-        />
-        <RootStack.Screen
-          name="NotificationList"
-          component={NotificationListScreen}
-          options={{ headerShown: false }}
-        />
+        <RootStack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Home" component={BottomTabNavigator} options={{ headerShown: false }} />
+        <RootStack.Screen name="Address" component={AddressScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
+
+        {/* Seller Screens */}
+        <RootStack.Screen name="SellerOnboarding" component={SellerOnboardingScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerRegistration" component={SellerRegistrationScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerDashboard" component={SellerDashboardScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="AddProduct" component={AddProductScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="EditSellerProfile" component={EditSellerProfileScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerOrders" component={SellerOrdersScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerAnalytics" component={SellerAnalyticsScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerSupport" component={SellerSupportScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerPromote" component={SellerPromoteScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="SellerProfile" component={SellerProfileScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ headerShown: false }} />
+
+        <RootStack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="FollowList" component={FollowListScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="ProductDetails" component={ProductDetailsScreen} options={{ headerShown: false }} />
+
+        <RootStack.Screen name="LoginSecurity" component={LoginSecurityScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="NotificationList" component={NotificationListScreen} options={{ headerShown: false }} />
+
+        <RootStack.Screen name="DeliveryDashboard" component={DeliveryDashboardScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="ChatList" component={ChatListScreen} options={{ headerShown: false }} />
+        <RootStack.Screen name="AIChat" component={AIChatScreen} options={{ headerShown: false }} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

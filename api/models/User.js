@@ -52,7 +52,19 @@ const userSchema = new mongoose.Schema({
   following: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Seller'
-  }]
+  }],
+  country: {
+    type: String,
+    default: 'Global'
+  },
+  city: {
+    type: String
+  },
+  location: {
+    type: { type: String, default: 'Point' },
+    coordinates: [Number] // [longitude, latitude]
+  }
 });
+userSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model('User', userSchema);

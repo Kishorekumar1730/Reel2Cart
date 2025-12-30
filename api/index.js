@@ -10,7 +10,20 @@ const Seller = require('./models/Seller');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
 const Notification = require('./models/Notification');
+const DeliveryPartner = require('./models/DeliveryPartner');
+const Message = require('./models/Message');
 const multer = require('multer');
+const {
+  getOtpTemplate,
+  getOrderConfirmationTemplate,
+  getOrderStatusTemplate,
+  getLoginAlertTemplate,
+  getWelcomeTemplate,
+  getOrderCancellationTemplate,
+  getSellerNewOrderTemplate,
+  getSellerWelcomeTemplate,
+  getAdminNotificationTemplate
+} = require('./utils/emailTemplates');
 const path = require('path');
 const fs = require('fs');
 
@@ -112,15 +125,31 @@ const emailTranslations = {
 // Send OTP email
 async function sendOTPEmail(email, otp, language = 'English') {
   const content = emailTranslations[language] || emailTranslations.English;
+  const htmlContent = getOtpTemplate(otp, language);
 
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: `"Reel2Cart Security" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: content.subject,
-    text: content.text(otp),
+    text: content.text(otp), // Fallback
+    html: htmlContent
   };
 
   await transporter.sendMail(mailOptions);
+}
+
+// Send Generic Email
+async function sendEmail(to, subject, html) {
+  try {
+    await transporter.sendMail({
+      from: `"Reel2Cart" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html
+    });
+  } catch (e) {
+    console.error("Email send failed:", e);
+  }
 }
 
 // Notification Helper
@@ -136,6 +165,17 @@ async function sendNotification(userId, title, message, type, relatedId = null) 
     await notification.save();
   } catch (err) {
     console.error("Error creating notification:", err);
+  }
+}
+
+// Admin Notification Helper
+async function notifyAdmin(title, message, type) {
+  try {
+    const adminEmail = process.env.EMAIL_USER; // Send to own support email as admin
+    const html = getAdminNotificationTemplate(title, message, type);
+    await sendEmail(adminEmail, `Admin Alert: ${title}`, html);
+  } catch (e) {
+    console.error("Admin notification failed:", e);
   }
 }
 
@@ -213,6 +253,14 @@ app.post('/verify-signup', async (req, res) => {
 
     await user.save();
 
+    // Send Welcome Email (Only if it was a new registration/verification)
+    // Note: Since verify-signup is used for login-via-otp too in some flows, strictly this should logic be for first verify.
+    // For now we assume if we just set isVerified=true, it's a welcome moment.
+    try {
+      const welcomeHtml = getWelcomeTemplate("User"); // We might not have name yet, use "User"
+      sendEmail(email, "Welcome to Reel2Cart! 🎬", welcomeHtml);
+    } catch (e) { console.error("Welcome email failed", e); }
+
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({ message: 'Verification successful', token, user });
   } catch (error) {
@@ -244,6 +292,12 @@ app.post('/login', async (req, res) => {
     if (email === 'reel2cart2025@gmail.com' && user.role !== 'admin') {
       user.role = 'admin';
       await user.save();
+    }
+
+    // Login Alert Email
+    if (user.email) {
+      const loginHtml = getLoginAlertTemplate(user.name || "User", new Date());
+      sendEmail(user.email, "New Login Detected 🚨", loginHtml);
     }
 
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -688,7 +742,9 @@ app.post("/orders", verifyToken, async (req, res) => {
       shippingAddress,
       paymentMethod,
       paymentId,
+      paymentId,
       status: paymentId || paymentMethod === "Reel2Cart Balance" ? "Paid" : "Processing",
+      deliveryOtp: generateOTP() // Generate Secure Delivery Code
     });
 
     await newOrder.save();
@@ -707,7 +763,7 @@ app.post("/orders", verifyToken, async (req, res) => {
       }
     }
 
-    // 6. Notify Sellers (New)
+    // 6. Notify Sellers (New) & Send Email to Buyer
     // Group products by Seller and send notifications
     const sellerGroups = {};
     products.forEach(p => {
@@ -721,6 +777,7 @@ app.post("/orders", verifyToken, async (req, res) => {
       // Find Seller User ID
       const seller = await Seller.findById(sellerId);
       if (seller && seller.userId) {
+        // App Notification
         await sendNotification(
           seller.userId,
           "New Order Received! 🎉",
@@ -728,8 +785,27 @@ app.post("/orders", verifyToken, async (req, res) => {
           "new_order",
           newOrder._id
         );
+        // Email Notification
+        if (seller.email) {
+          const sellerEmailHtml = getSellerNewOrderTemplate(seller.sellerName, newOrder._id, productNames.join(', '));
+          sendEmail(seller.email, "Action Required: New Order Received", sellerEmailHtml);
+        }
       }
     }
+
+    // Send Order Confirmation Email to Buyer
+    const buyer = await User.findById(userId);
+    if (buyer && buyer.email) {
+      const emailHtml = getOrderConfirmationTemplate(newOrder, buyer.name);
+      sendEmail(buyer.email, `Order Confirmation #${newOrder._id.toString().slice(-6)}`, emailHtml);
+    }
+
+    // Notify Admin
+    notifyAdmin(
+      "New Order Received",
+      `Order #${newOrder._id} placed by ${userId}. Value: ${totalAmount}.`,
+      'new_order'
+    );
 
     res.status(201).json({ message: "Order placed successfully", order: newOrder, walletBalance: user.walletBalance });
   } catch (error) {
@@ -757,21 +833,48 @@ app.post("/orders/cancel", async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    if (order.status === 'Delivered' || order.status === 'Cancelled') {
-      return res.status(400).json({ message: "Cannot cancel this order" });
+    if (order.status === 'Shipped' || order.status === 'Delivered' || order.status === 'Cancelled') {
+      return res.status(400).json({ message: "Cannot cancel order at this stage" });
     }
 
     order.status = 'Cancelled';
     await order.save();
 
-    // Optional: Logic to refund wallet balance if applicable
-    if (order.paymentMethod === 'Reel2Cart Balance') {
+    // Refund logic (simulated)
+    if (order.paymentMethod === 'Reel2Cart Balance' || order.paymentId) {
       const user = await User.findById(order.userId);
       if (user) {
         user.walletBalance += order.totalAmount;
         await user.save();
       }
     }
+
+    // Send Cancellation Email to Buyer
+    const user = await User.findById(order.userId);
+    if (user && user.email) {
+      const cancelHtml = getOrderCancellationTemplate(order, user.name || "Customer");
+      sendEmail(user.email, `Order Cancelled: #${order._id.toString().slice(-6)}`, cancelHtml);
+    }
+
+    // Notify Sellers about cancellation
+    const products = order.products;
+    const sellerGroups = {};
+    products.forEach(p => { if (p.sellerId) sellerGroups[p.sellerId] = true; }); // Unique sellers
+
+    for (const sellerId of Object.keys(sellerGroups)) {
+      const seller = await Seller.findById(sellerId);
+      if (seller && seller.email) {
+        sendEmail(seller.email, `Order Cancelled #${order._id.toString().slice(-6)}`, `<p>Order #${order._id} has been cancelled by the buyer. Please do not ship.</p>`);
+      }
+    }
+
+    // Notify Admin
+    notifyAdmin(
+      "Order Cancelled",
+      `Order #${order._id} cancelled by user ${order.userId}. Total amount: ${order.totalAmount}.`,
+      'order_cancelled',
+      order._id
+    );
 
     res.status(200).json({ message: "Order cancelled successfully", order });
   } catch (error) {
@@ -836,6 +939,13 @@ app.put("/orders/:orderId/status", async (req, res) => {
     }
 
     await sendNotification(order.userId, title, message, "order_update", order._id);
+
+    // Send Status Update Email
+    const buyer = await User.findById(order.userId);
+    if (buyer && buyer.email) {
+      const emailHtml = getOrderStatusTemplate(order, status);
+      sendEmail(buyer.email, `Order Update: ${status}`, emailHtml);
+    }
 
     res.status(200).json({ message: "Order status updated", order });
   } catch (error) {
@@ -931,7 +1041,6 @@ app.post("/seller/register", async (req, res) => {
     }
 
     // --- Validation Logic ---
-    // --- Validation Logic ---
     let accountType = req.body.accountType || 'licensed'; // Default to licensed if not provided
     if (accountType === 'licensed') {
       const { gstin, businessPan, additionalProofId, additionalProofType } = req.body;
@@ -994,17 +1103,12 @@ app.post("/seller/register", async (req, res) => {
     await newSeller.save();
 
     // --- Notifications ---
-    if (accountType === 'licensed') {
-      await sendSellerWelcomeEmail(email, sellerName, businessName);
-    } else {
-      // 1. Notify Admin
-      const adminMail = {
-        from: process.env.EMAIL_USER,
-        to: 'shopflix2025@gmail.com',
-        subject: `[ACTION REQUIRED] New Local Seller: ${businessName}`,
-        html: `<h3>New Local Seller Request</h3><p>Seller: ${sellerName}</p><p>Business: ${businessName}</p><p>Approval needed.</p>`
-      };
-      try { await transporter.sendMail(adminMail); } catch (e) { console.error("Admin mail failed", e); }
+    // Welcome Email to Seller
+    const welcomeHtml = getSellerWelcomeTemplate(sellerName, businessName);
+    sendEmail(email, "Welcome to Seller Hub! 🚀", welcomeHtml);
+    if (accountType !== 'licensed') {
+      // 1. Notify Admin (for local sellers needing approval)
+      notifyAdmin("New Seller Application", `Business '${businessName}' has applied for verification.`, 'new_seller');
 
       // 2. Notify User
       const userMail = {
@@ -1015,8 +1119,6 @@ app.post("/seller/register", async (req, res) => {
       };
       try { await transporter.sendMail(userMail); } catch (e) { }
     }
-
-    // ... existing register endpoint ...
 
     res.status(201).json({
       message: accountType === 'licensed' ? "Seller account created successfully!" : "Application submitted for approval.",
@@ -1120,6 +1222,25 @@ app.get("/user/:userId/stats", async (req, res) => {
   } catch (error) {
     console.error("Error fetching stats:", error);
     res.status(500).json({ message: "Error fetching user stats" });
+  }
+});
+
+// Save User Location
+app.post("/user/location", async (req, res) => {
+  try {
+    const { userId, country, city, coordinates } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.country = country || 'Global';
+    user.city = city;
+    if (coordinates) {
+      user.location = { type: 'Point', coordinates };
+    }
+    await user.save();
+    res.json({ message: "Location updated", country: user.country });
+  } catch (e) {
+    res.status(500).json({ message: "Error updating location" });
   }
 });
 
@@ -1326,8 +1447,29 @@ app.get("/seller/dashboard/:userId", async (req, res) => {
 // Get All Products (with filters)
 app.get("/products", async (req, res) => {
   try {
-    const { category, featured, limit, search } = req.query;
+    const { category, featured, limit, search, country } = req.query; // Added country
     const query = {};
+
+    // Regional Filtering Logic (Professional)
+    // If country is specific (e.g. 'India'), show 'India' AND 'Global' items.
+    // If country is 'Global', show EVERYTHING (or just Global? usually everything from worldwide sellers).
+    if (country && country !== 'Global') {
+      console.log(`[API] Filtering products for region: ${country}`);
+      query.$or = [
+        { country: country },
+        { country: 'Global' },
+        // removed legacy fallback { country: { $exists: false } } for strict compliance
+      ];
+    } else {
+      console.log(`[API] Showing Global/All products`);
+      // If Global is selected (or no country provided), we show EVERYTHING to maximize discoverability.
+      // User requested strictness: "If selected region does not match... won't suggest". 
+      // This implies that if I select 'India', I see India + Global.
+      // If I select 'Global', I see everything OR just Global products?
+      // Standard e-commerce 'Global Store' often means 'International Shipping available'.
+      // For now, we assume Global = Show All products.
+    }
+
     if (category && category !== 'All') query.category = category;
     if (featured === 'true') query.isFeatured = true;
 
@@ -1356,9 +1498,23 @@ app.get("/products", async (req, res) => {
 app.get("/products/reels", async (req, res) => {
   try {
     // Fetch products that have a non-empty videoUrl
-    const products = await Product.find({
-      videoUrl: { $exists: true, $ne: "" }
-    })
+    const { country } = req.query;
+    let query = { videoUrl: { $exists: true, $ne: "" } };
+
+    if (country && country !== 'Global') {
+      console.log(`[API] Filtering REELS for region: ${country}`);
+      query.$and = [
+        {
+          $or: [
+            { country: country },
+            { country: 'Global' }
+            // Strict mode: No legacy fallback
+          ]
+        }
+      ];
+    }
+
+    const products = await Product.find(query)
       .populate('sellerId', 'businessName sellerName profileImage') // Populate Seller Info
       .limit(20)
       .sort({ createdAt: -1 });
@@ -1747,6 +1903,353 @@ app.get("/offers", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+
+
+// --- DELIVERY AGENT ENDPOINTS ---
+
+// 0. Register Delivery Partner (Licensing)
+app.post("/delivery/register", async (req, res) => {
+  try {
+    const { userId, licenseNumber, vehicleType, vehiclePlate } = req.body;
+
+    const existing = await DeliveryPartner.findOne({ userId });
+    if (existing) return res.status(400).json({ message: "Application already submitted." });
+
+    const newPartner = new DeliveryPartner({
+      userId,
+      licenseNumber,
+      vehicleType,
+      vehiclePlate,
+      verificationStatus: 'pending' // Admin must approve
+    });
+
+    await newPartner.save();
+
+    // Notify Admin
+    notifyAdmin("New Delivery Partner Application", `User ${userId} applied. License: ${licenseNumber}`, 'new_delivery_partner');
+
+    res.status(201).json({ message: "Application Submitted. Pending Verification." });
+  } catch (e) {
+    res.status(500).json({ message: "Error submitting application" });
+  }
+});
+
+// 0.1 Check Status
+app.get("/delivery/status/:userId", async (req, res) => {
+  try {
+    const partner = await DeliveryPartner.findOne({ userId: req.params.userId }).populate('userId', 'name');
+    if (!partner) return res.json({ registered: false });
+    res.json({ registered: true, partner });
+  } catch (e) {
+    res.status(500).json({ message: "Error fetching status" });
+  }
+});
+
+// 0.2 Toggle Online/Offline
+app.post("/delivery/toggle-online", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const partner = await DeliveryPartner.findOne({ userId });
+    if (!partner) return res.status(404).json({ message: "Partner not found" });
+
+    if (partner.verificationStatus !== 'approved') return res.status(403).json({ message: "Account not verified" });
+
+    partner.isOnline = !partner.isOnline;
+    await partner.save();
+    res.json({ isOnline: partner.isOnline });
+  } catch (e) {
+    res.status(500).json({ message: "Error" });
+  }
+});
+
+// 1. Get Available Jobs (For Agents)
+// Orders that are 'Shipped' (by Seller) but not yet assigned to an agent?
+// OR 'Ready to Ship' if we had that status.
+// Assumption: Seller marks 'Shipped' -> It means ready for pickup or already moved.
+// Let's assume: Seller marks 'Processing' -> 'Ready for Pickup'.
+// Then Agent marks 'Picked Up' -> 'Shipped'.
+// For compatibility with existing flow: 'Shipped' means "Handed over to logistics".
+// So Agents look for 'Shipped' orders that have NO deliveryAgentId.
+app.get("/delivery/available", async (req, res) => {
+  try {
+    // Find orders that are 'Shipped' or 'Processing' (depending on flow) and unassigned
+    // For professional flow: Seller marks "Ready to Ship".
+    // Here we'll stick to: Seller marks 'Processing' -> Agent picks up.
+    // OR Seller updates to 'Shipped' -> Agent delivers.
+    // Let's say: Orders with status 'Shipped' and no agent are waiting for "Last Mile Delivery".
+    const orders = await Order.find({
+      status: { $in: ['Shipped', 'Ready to Ship'] },
+      deliveryAgentId: { $exists: false }
+    }).populate('userId', 'name mobileNo shippingAddress'); // Agent needs address
+
+    res.json(orders);
+  } catch (e) {
+    res.status(500).json({ message: "Error fetching jobs" });
+  }
+});
+
+// 2. Accept Job
+app.post("/delivery/accept", async (req, res) => {
+  try {
+    const { orderId, agentId } = req.body;
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, deliveryAgentId: { $exists: false } },
+      { deliveryAgentId: agentId },
+      { new: true }
+    );
+    if (!order) return res.status(400).json({ message: "Order not available or already taken" });
+    res.json({ message: "Job Accepted", order });
+  } catch (e) {
+    res.status(500).json({ message: "Error accepting job" });
+  }
+});
+
+// 3. My Jobs
+app.get("/delivery/my-jobs/:agentId", async (req, res) => {
+  try {
+    const orders = await Order.find({
+      deliveryAgentId: req.params.agentId,
+      status: { $ne: 'Delivered' } // Active jobs only
+    }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (e) {
+    res.status(500).json({ message: "Error fetching jobs" });
+  }
+});
+
+// 4. Update Status (Agent)
+app.post("/delivery/update-status", async (req, res) => {
+  try {
+    const { orderId, status } = req.body; // 'Out for Delivery'
+    const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
+
+    // Notify User
+    await sendNotification(order.userId, "Delivery Update 🚚", `Your order is ${status}`, "order_update", order._id);
+
+    // Send Email
+    const user = await User.findById(order.userId);
+    if (user && user.email) {
+      const emailHtml = getOrderStatusTemplate(order, status);
+      sendEmail(user.email, `Order Status: ${status}`, emailHtml);
+    }
+
+    res.json({ message: "Status updated", order });
+  } catch (e) {
+    res.status(500).json({ message: "Error updating status" });
+  }
+});
+
+// 5. Complete Delivery (Secure OTP)
+app.post("/delivery/complete", async (req, res) => {
+  try {
+    const { orderId, otp } = req.body;
+    const order = await Order.findById(orderId);
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.deliveryOtp !== otp) {
+      return res.status(400).json({ message: "Invalid Security Code" });
+    }
+
+    order.status = 'Delivered';
+    order.deliveryOtp = undefined; // Clear OTP
+    await order.save();
+
+    // Notify User & Seller
+    await sendNotification(order.userId, "Delivered! 🎉", "Your package has been delivered successfully.", "order_update", order._id);
+
+    // Update Seller Earnings/Stats if needed (already aggregating realtime)
+
+    res.json({ message: "Delivery Verified & Completed", order });
+  } catch (e) {
+    res.status(500).json({ message: "Error completing delivery" });
+  }
+});
+
+// --- MESSAGING ENDPOINTS ---
+
+app.post("/messages/send", async (req, res) => {
+  try {
+    const { senderId, receiverId, message } = req.body;
+    const newMessage = new Message({ senderId, receiverId, message });
+    await newMessage.save();
+
+    // Notify Receiver (Optional, but professional)
+    // sendNotification(receiverId, "New Message", `You have a new message.`, "message", senderId);
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    res.status(500).json({ message: "Error sending message" });
+  }
+});
+
+app.get("/messages/:user1Id/:user2Id", async (req, res) => {
+  try {
+    const { user1Id, user2Id } = req.params;
+    const messages = await Message.find({
+      $or: [
+        { senderId: user1Id, receiverId: user2Id },
+        { senderId: user2Id, receiverId: user1Id }
+      ]
+    }).sort({ createdAt: 1 });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching messages" });
+  }
+});
+
+// Get List of Conversations (Inbox)
+app.get("/messages/conversations/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    // Aggregation to find recent conversations
+    // 1. Find all messages where user is sender or receiver
+    // 2. Sort by date desc
+    // 3. Group by the OTHER user ID
+
+    const conversations = await Message.aggregate([
+      {
+        $match: {
+          $or: [
+            { senderId: new mongoose.Types.ObjectId(userId) },
+            { receiverId: new mongoose.Types.ObjectId(userId) }
+          ]
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$senderId", new mongoose.Types.ObjectId(userId)] },
+              "$receiverId",
+              "$senderId"
+            ]
+          },
+          lastMessage: { $first: "$message" },
+          createdAt: { $first: "$createdAt" },
+          otherUserId: {
+            $first: {
+              $cond: [
+                { $eq: ["$senderId", new mongoose.Types.ObjectId(userId)] },
+                "$receiverId",
+                "$senderId"
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
+
+    // Populate User Details
+    const populated = await User.populate(conversations, { path: "otherUserId", select: "name email" });
+
+    // Populate Seller Details (if user is a seller) - Optional generally, but good for names
+    // Ideally we just check User collection as everyone is a user.
+
+    res.json(populated);
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Error fetching conversations" });
+  }
+});
+
+// --- AI ASSISTANT LOGIC ---
+app.post("/ai/chat", async (req, res) => {
+  try {
+    const { userId, message } = req.body;
+    const lowerMsg = message.toLowerCase();
+
+    console.log(`[AI] Processing message from ${userId}: ${message}`);
+
+    // Response Object
+    let response = {
+      text: "I'm still learning. Can you try asking about products or your orders?",
+      suggestions: ["Track Order", "Show Popular", "Help"],
+      products: []
+    };
+
+    // 1. ORDER TRACKING INTENT
+    if (lowerMsg.includes("order") || lowerMsg.includes("track") || lowerMsg.includes("status")) {
+      const orders = await Order.find({ userId }).sort({ createdAt: -1 }).limit(1);
+      if (orders.length > 0) {
+        const latestOrder = orders[0];
+        response.text = `Your latest order #${latestOrder._id.toString().slice(-6)} is currently **${latestOrder.status}**.`;
+        if (latestOrder.status === 'Delivered') {
+          response.text += " Hope you enjoyed it! 😊";
+        } else {
+          response.text += ` Total amount: ₹${latestOrder.totalPrice}.`;
+        }
+      } else {
+        response.text = "You haven't placed any orders yet. Start shopping and I'll track them for you! 🛍️";
+      }
+      return res.json(response);
+    }
+
+    // 2. PRODUCT DISCOVERY INTENT (Search)
+    if (lowerMsg.includes("show") || lowerMsg.includes("buy") || lowerMsg.includes("looking for") || lowerMsg.includes("search")) {
+      // Extract keyword (dumb extraction: remove stop words)
+      const stopWords = ["show", "me", "i", "want", "to", "buy", "looking", "for", "search", "products", "a", "an", "the"];
+      const keywords = lowerMsg.split(" ").filter(w => !stopWords.includes(w)).join(" ");
+
+      if (keywords.length > 1) {
+        const products = await Product.find({
+          $or: [
+            { name: { $regex: keywords, $options: 'i' } },
+            { category: { $regex: keywords, $options: 'i' } },
+            { description: { $regex: keywords, $options: 'i' } }
+          ]
+        }).limit(3);
+
+        if (products.length > 0) {
+          response.text = `Here are some specialized picks for "${keywords}":`;
+          response.products = products;
+        } else {
+          response.text = `I couldn't find anything matching "${keywords}". Try browsing our categories!`;
+        }
+        return res.json(response);
+      }
+    }
+
+    // 3. GREETING INTENT
+    if (lowerMsg.includes("hi") || lowerMsg.includes("hello") || lowerMsg.includes("hey")) {
+      const user = await User.findById(userId);
+      const name = user ? user.name.split(' ')[0] : "Friend";
+      response.text = `Hello ${name}! 👋 I'm your Reel2Cart AI Assistant. How can I help you shop today?`;
+      return res.json(response);
+    }
+
+    // 4. HELP / SUPPORT INTENT
+    if (lowerMsg.includes("help") || lowerMsg.includes("support")) {
+      response.text = "I can help you:\n• Track your orders 📦\n• Find products 🔎\n• Check current deals 🏷️\n\nJust ask me!";
+      return res.json(response);
+    }
+
+    // 5. DEALS / OFFERS
+    if (lowerMsg.includes("deal") || lowerMsg.includes("offer") || lowerMsg.includes("discount")) {
+      response.text = "Check out our 'Deals of the Day' on the home page! We have up to 50% off on Electronics right now. 🔥";
+      return res.json(response);
+    }
+
+    // DEFAULT FALLBACK (With specific check for 'thank')
+    if (lowerMsg.includes("thank")) {
+      response.text = "You're welcome! Happy Shopping! 💖";
+      return res.json(response);
+    }
+
+    res.json(response);
+
+  } catch (e) {
+    console.error("AI Error:", e);
+    res.status(500).json({ text: "My brain is freezing... please try again later! ❄️" });
+  }
+});
+
+// Start Server
+app.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);
 });

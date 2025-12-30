@@ -4,13 +4,17 @@ import { StyleSheet, Text, View } from "react-native";
 import MainNavigator from "./navigation";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { NotificationProvider } from "./context/NotificationContext";
+
 export default function App() {
   return (
     <LanguageProvider>
-      <SafeAreaProvider>
-        <MainNavigator />
-        <StatusBar style="auto" />
-      </SafeAreaProvider>
+      <NotificationProvider>
+        <SafeAreaProvider>
+          <MainNavigator />
+          <StatusBar style="auto" />
+        </SafeAreaProvider>
+      </NotificationProvider>
     </LanguageProvider>
   );
 }

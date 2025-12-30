@@ -63,6 +63,13 @@ const orderSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    deliveryAgentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    deliveryOtp: {
+        type: String, // 6-digit code for secure delivery
+    }
 });
 
 module.exports = mongoose.model("Order", orderSchema);
