@@ -29,7 +29,20 @@ const AddressScreen = () => {
     const [userId, setUserId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [countryModalVisible, setCountryModalVisible] = useState(false);
     const [editingAddress, setEditingAddress] = useState(null);
+
+    const availableCountries = [
+        "India",
+        "United States",
+        "United Kingdom",
+        "Canada",
+        "Australia",
+        "United Arab Emirates",
+        "Germany",
+        "France",
+        "Japan"
+    ];
 
     // Form State
     const [name, setName] = useState("");
@@ -265,9 +278,7 @@ const AddressScreen = () => {
                                             });
                                             if (response.ok) {
                                                 Alert.alert("Success", "Order address updated");
-                                                // Navigate back to params, forcing a refresh if possible, or just go back
-                                                // Ideally pass the updated order back or rely on focus effect
-                                                navigation.navigate("OrderDetail", { order: { ...route.params.initialOrder, shippingAddress: item } }); // Simplistic update
+                                                navigation.navigate("OrderDetail", { order: { ...route.params.initialOrder, shippingAddress: item } });
                                             } else {
                                                 Alert.alert("Error", "Failed to update address");
                                             }
@@ -286,7 +297,6 @@ const AddressScreen = () => {
                     ))
                 )}
             </ScrollView>
-
 
             {/* Add/Edit Modal */}
             <Modal
@@ -310,6 +320,7 @@ const AddressScreen = () => {
                     </View>
 
                     <ScrollView contentContainerStyle={styles.formScroll}>
+                        {/* Name */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Full Name (Required)</Text>
                             <TextInput
@@ -320,6 +331,7 @@ const AddressScreen = () => {
                             />
                         </View>
 
+                        {/* Mobile */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Mobile Number (Required)</Text>
                             <TextInput
@@ -331,6 +343,7 @@ const AddressScreen = () => {
                             />
                         </View>
 
+                        {/* House */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Flat, House no., Building (Required)</Text>
                             <TextInput
@@ -341,6 +354,7 @@ const AddressScreen = () => {
                             />
                         </View>
 
+                        {/* Street */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Area, Street, Sector, Village (Required)</Text>
                             <TextInput
@@ -351,6 +365,7 @@ const AddressScreen = () => {
                             />
                         </View>
 
+                        {/* Landmark */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Landmark (Optional)</Text>
                             <TextInput
@@ -361,6 +376,7 @@ const AddressScreen = () => {
                             />
                         </View>
 
+                        {/* City & State */}
                         <View style={styles.row}>
                             <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
                                 <Text style={styles.label}>Town/City</Text>
@@ -382,6 +398,7 @@ const AddressScreen = () => {
                             </View>
                         </View>
 
+                        {/* Zip & Country */}
                         <View style={styles.row}>
                             <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
                                 <Text style={styles.label}>Pincode</Text>
@@ -396,13 +413,13 @@ const AddressScreen = () => {
 
                             <View style={[styles.formGroup, { flex: 1 }]}>
                                 <Text style={styles.label}>Country</Text>
-                                <TextInput
-                                    value={country}
-                                    onChangeText={setCountry}
-                                    placeholder="India"
-                                    style={[styles.input, { backgroundColor: '#f0f0f0' }]}
-                                    editable={false}
-                                />
+                                <Pressable
+                                    style={[styles.input, { justifyContent: 'center', backgroundColor: '#fff' }]}
+                                    onPress={() => setCountryModalVisible(true)}
+                                >
+                                    <Text style={{ fontSize: 16 }}>{country}</Text>
+                                    <Ionicons name="caret-down" size={16} color="#666" style={{ position: 'absolute', right: 10 }} />
+                                </Pressable>
                             </View>
                         </View>
 
@@ -412,8 +429,43 @@ const AddressScreen = () => {
 
                     </ScrollView>
                 </SafeAreaView>
-            </Modal>
 
+                {/* Country Selection Modal */}
+                <Modal
+                    visible={countryModalVisible}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setCountryModalVisible(false)}
+                >
+                    <View style={styles.countryModalOverlay}>
+                        <View style={styles.countryModalContent}>
+                            <View style={styles.countryModalHeader}>
+                                <Text style={styles.countryModalTitle}>Select Country</Text>
+                                <Pressable onPress={() => setCountryModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color="#000" />
+                                </Pressable>
+                            </View>
+                            <ScrollView>
+                                {availableCountries.map((c, index) => (
+                                    <Pressable
+                                        key={index}
+                                        style={styles.countryItem}
+                                        onPress={() => {
+                                            setCountry(c);
+                                            setCountryModalVisible(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.countryText, country === c && styles.selectedCountryText]}>
+                                            {c}
+                                        </Text>
+                                        {country === c && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                                    </Pressable>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    </View>
+                </Modal>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -558,6 +610,47 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
         fontWeight: 'bold'
-    }
-
+    },
+    // Country Modal Styles
+    countryModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    countryModalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 30,
+        maxHeight: '60%',
+    },
+    countryModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+    },
+    countryModalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    countryItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderColor: '#f0f0f0',
+    },
+    countryText: {
+        fontSize: 16,
+        color: '#333',
+    },
+    selectedCountryText: {
+        color: '#E50914',
+        fontWeight: 'bold',
+    },
 });

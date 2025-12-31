@@ -6,12 +6,14 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useLanguage } from '../context/LanguageContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { wp, hp, normalize } from '../utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const OrdersScreen = () => {
     const navigation = useNavigation();
     const { t } = useLanguage();
+    const { formatPrice } = useCurrency();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [userId, setUserId] = useState(null);
@@ -109,7 +111,7 @@ const OrdersScreen = () => {
                     <Image source={{ uri: prod.image }} style={styles.productImage} resizeMode="contain" />
                     <View style={styles.productInfo}>
                         <Text style={styles.productName} numberOfLines={1}>{prod.name}</Text>
-                        <Text style={styles.productQty}>Qty: {prod.quantity} × ₹{prod.price}</Text>
+                        <Text style={styles.productQty}>Qty: {prod.quantity} × {formatPrice(prod.price)}</Text>
                     </View>
                 </View>
             ))}
@@ -118,7 +120,7 @@ const OrdersScreen = () => {
 
             <View style={styles.cardFooter}>
                 <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>₹{item.totalAmount}</Text>
+                <Text style={styles.totalAmount}>{formatPrice(item.totalAmount)}</Text>
             </View>
         </TouchableOpacity>
     );

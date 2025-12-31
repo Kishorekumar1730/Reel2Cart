@@ -5,11 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { wp, hp, normalize } from '../utils/responsive';
+import { useCurrency } from '../context/CurrencyContext';
 import AnimatedButton from '../components/AnimatedButton';
 import { API_BASE_URL } from '../config/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProductDetailsScreen = ({ route, navigation }) => {
+    const { formatPrice } = useCurrency();
     const { product } = route.params;
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [similarProducts, setSimilarProducts] = useState([]);
@@ -197,7 +199,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     const handleShare = async () => {
         try {
             await Share.share({
-                message: `Check out ${product.name} on Reel2Cart! Price: ₹${product.price}`,
+                message: `Check out ${product.name} on Reel2Cart! Price: ${formatPrice(product.price)}`,
             });
         } catch (error) {
             console.log(error);
@@ -231,9 +233,9 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                     <Text style={styles.suggestionReviewCount}>({item.reviews || 99})</Text>
                 </View>
                 <View style={styles.suggestionPriceRow}>
-                    <Text style={styles.suggestionPrice}>₹{item.price}</Text>
+                    <Text style={styles.suggestionPrice}>{formatPrice(item.price)}</Text>
                     {item.originalPrice && (
-                        <Text style={styles.suggestionOriginalPrice}>₹{item.originalPrice}</Text>
+                        <Text style={styles.suggestionOriginalPrice}>{formatPrice(item.originalPrice)}</Text>
                     )}
                 </View>
             </View>
@@ -310,10 +312,10 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                     <Text style={styles.productName}>{product.name}</Text>
 
                     <View style={styles.priceContainer}>
-                        <Text style={styles.price}>₹{product.price}</Text>
+                        <Text style={styles.price}>{formatPrice(product.price)}</Text>
                         {product.originalPrice && (
                             <>
-                                <Text style={styles.originalPrice}>₹{product.originalPrice}</Text>
+                                <Text style={styles.originalPrice}>{formatPrice(product.originalPrice)}</Text>
                                 <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
                             </>
                         )}

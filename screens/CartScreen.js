@@ -16,10 +16,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLanguage } from "../context/LanguageContext";
 import { wp, hp, normalize } from "../utils/responsive";
+import { useCurrency } from "../context/CurrencyContext";
 
 const CartScreen = () => {
     const navigation = useNavigation();
     const { t } = useLanguage();
+    const { formatPrice } = useCurrency();
 
     const [cartItems, setCartItems] = useState([]);
     const [selectedItems, setSelectedItems] = useState(new Set());
@@ -239,7 +241,7 @@ const CartScreen = () => {
                             </View>
 
                             <Text style={styles.subtotalText}>
-                                {t('subtotal')} ({selectedItems.size} {t('items')}): <Text style={styles.priceText}>₹{totalAmount.toLocaleString()}</Text>
+                                {t('subtotal')} ({selectedItems.size} {t('items')}): <Text style={styles.priceText}>{formatPrice(totalAmount)}</Text>
                             </Text>
                             <AnimatedButton onPress={handeProceedToBuy} style={[styles.proceedBtn, selectedItems.size === 0 && styles.disabledBtn]} disabled={selectedItems.size === 0}>
                                 <Text style={styles.proceedBtnText}>
@@ -265,7 +267,7 @@ const CartScreen = () => {
 
                                     <View style={styles.itemDetails}>
                                         <Text numberOfLines={2} style={styles.itemTitle}>{item.name}</Text>
-                                        <Text style={styles.itemPrice}>₹{item.price.toLocaleString()}</Text>
+                                        <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
                                         <Text style={styles.uStock}>In Stock</Text>
 
                                         {/* Quantity Control */}

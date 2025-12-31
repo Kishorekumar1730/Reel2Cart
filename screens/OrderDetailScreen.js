@@ -5,6 +5,7 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useLanguage } from '../context/LanguageContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { wp, hp, normalize } from '../utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -12,6 +13,7 @@ const OrderDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { t } = useLanguage();
+    const { formatPrice } = useCurrency();
 
     // We can pass the full order object or just ID. If ID, fetch fresh.
     // For now assuming we pass the full order object or fetch via ID if needed.
@@ -132,7 +134,7 @@ const OrderDetailScreen = () => {
                 <View style={styles.section}>
                     <Text style={styles.orderId}>Order #{order._id}</Text>
                     <Text style={styles.orderDate}>Placed on {new Date(order.createdAt).toDateString()}</Text>
-                    <Text style={styles.totalPrice}>Total: ₹{order.totalAmount}</Text>
+                    <Text style={styles.totalPrice}>Total: {formatPrice(order.totalAmount)}</Text>
                 </View>
 
                 {/* Cancelled Banner */}
@@ -173,7 +175,7 @@ const OrderDetailScreen = () => {
                             <Image source={{ uri: prod.image }} style={styles.productImage} resizeMode="contain" />
                             <View style={styles.productInfo}>
                                 <Text style={styles.productName}>{prod.name}</Text>
-                                <Text style={styles.productMeta}>Qty: {prod.quantity} | ₹{prod.price}</Text>
+                                <Text style={styles.productMeta}>Qty: {prod.quantity} | {formatPrice(prod.price)}</Text>
                             </View>
                         </View>
                     ))}

@@ -6,12 +6,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useLanguage } from '../context/LanguageContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { wp, hp, normalize } from '../utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const FavouriteScreen = () => {
     const navigation = useNavigation();
     const { t } = useLanguage();
+    const { formatPrice } = useCurrency();
     const [wishlist, setWishlist] = useState([]);
     const [loading, setLoading] = useState(false);
     const [userId, setUserId] = useState(null);
@@ -84,7 +86,7 @@ const FavouriteScreen = () => {
             </View>
             <View style={styles.details}>
                 <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.price}>₹{item.price}</Text>
+                <Text style={styles.price}>{formatPrice(item.price)}</Text>
                 <TouchableOpacity style={styles.cartBtn} onPress={() => {
                     // Quick add to cart logic (simplified)
                     Alert.alert("Info", "Go to Home to add to cart or implement quick add here.");

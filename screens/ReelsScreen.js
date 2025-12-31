@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { wp, hp, normalize } from '../utils/responsive';
+import { useCurrency } from '../context/CurrencyContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -95,6 +96,7 @@ const CommentModal = ({ visible, onClose, comments, onAddComment, loading }) => 
 
 // --- SINGLE REEL ITEM ---
 const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
+    const { formatPrice } = useCurrency(); // Use Currency Hook
 
     // Resolve Video URL (Handle relative paths)
     const getVideoUrl = (url) => {
@@ -216,7 +218,7 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
     const handleShare = async () => {
         try {
             await Share.share({
-                message: `Check out this amazing product on Reel2Cart!\n${item.name} - ₹${item.price}\n${item.videoUrl}`,
+                message: `Check out this amazing product on Reel2Cart!\n${item.name} - ${formatPrice(item.price)}\n${item.videoUrl}`,
             });
         } catch (error) {
             console.log(error);
@@ -304,7 +306,7 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
 
                     <View style={styles.priceTag}>
                         <Ionicons name="pricetag" size={14} color="#fff" style={{ marginRight: 5 }} />
-                        <Text style={styles.priceText}>₹{item.price}</Text>
+                        <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
                         <TouchableOpacity
                             style={styles.shopNowBtn}
                             onPress={async () => {

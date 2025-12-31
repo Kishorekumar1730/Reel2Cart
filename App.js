@@ -1,4 +1,5 @@
 import { LanguageProvider } from "./context/LanguageContext";
+import { CurrencyProvider } from "./context/CurrencyContext";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import MainNavigator from "./navigation";
@@ -9,12 +10,14 @@ import { NotificationProvider } from "./context/NotificationContext";
 export default function App() {
   return (
     <LanguageProvider>
-      <NotificationProvider>
-        <SafeAreaProvider>
-          <MainNavigator />
-          <StatusBar style="auto" />
-        </SafeAreaProvider>
-      </NotificationProvider>
+      <CurrencyProvider>
+        <NotificationProvider>
+          <SafeAreaProvider>
+            <MainNavigator />
+            <StatusBar style="auto" />
+          </SafeAreaProvider>
+        </NotificationProvider>
+      </CurrencyProvider>
     </LanguageProvider>
   );
 }

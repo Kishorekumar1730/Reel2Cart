@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useLanguage } from '../context/LanguageContext';
+import { useCurrency } from '../context/CurrencyContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location'; // Add Location
 
@@ -104,7 +105,7 @@ const HomeScreen = ({ navigation }) => {
 
     // Location State
     // Location State
-    const [country, setCountry] = useState({ code: 'Global', name: 'Global Store', flag: '🌍' });
+    const { region, changeRegion, formatPrice } = useCurrency();
     const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
     const [countrySearch, setCountrySearch] = useState(''); // New search state
 
@@ -142,7 +143,8 @@ const HomeScreen = ({ navigation }) => {
             // So I MUST pass country.name (e.g. 'India').
             // Exception: For Global, my object is { code: 'Global', name: 'Global Store' }.
             // Strict check: if code is 'Global', use 'Global'. Else use country.name.
-            const countryFilter = country.code === 'Global' ? 'Global' : country.name;
+            // Strict check: if code is 'Global', use 'Global'. Else use region.name.
+            const countryFilter = region.code === 'Global' ? 'Global' : region.name;
 
             let prodUrl = `${API_BASE_URL}/products?country=${countryFilter}`;
             if (category !== 'All') prodUrl += `&category=${category}`;
@@ -277,9 +279,6 @@ const HomeScreen = ({ navigation }) => {
             const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
             });
             const uploadData = await uploadRes.json();
 
@@ -328,52 +327,19 @@ const HomeScreen = ({ navigation }) => {
             };
             init();
 
-        }, [activeCategory, country]) // Re-fetch when country changes
+        }, [activeCategory, region]) // Re-fetch when country changes
     );
 
-    // Initial Country Detection (Once)
+    // Initial Country Detection removed - Handled by Context or User Selection
+    // If you want auto-detect, implement it here to call changeRegion(detected) once
     useEffect(() => {
-        const detectLocation = async () => {
-            // Check if user already manually selected a country
-            const savedCountry = await AsyncStorage.getItem("userSelectedCountry");
-            if (savedCountry) {
-                setCountry(JSON.parse(savedCountry));
-                return;
-            }
-
-            // Else Auto-Detect
-            try {
-                let { status } = await Location.requestForegroundPermissionsAsync();
-                if (status === 'granted') {
-                    let loc = await Location.getCurrentPositionAsync({});
-                    let region = await Location.reverseGeocodeAsync({
-                        latitude: loc.coords.latitude,
-                        longitude: loc.coords.longitude
-                    });
-
-                    if (region && region.length > 0) {
-                        const detectedName = region[0].country; // e.g. "India"
-                        // Find match in our list or default to Global
-                        // Try matching by name first, then by ISO code if available
-                        const match = ALL_COUNTRIES.find(c =>
-                            c.name.toLowerCase() === detectedName?.toLowerCase() ||
-                            c.code === region[0].isoCountryCode
-                        );
-                        if (match) {
-                            setCountry(match);
-                        }
-                    }
-                }
-            } catch (e) { console.log(e); }
-        };
-        detectLocation();
-    }, []);
+        fetchData(activeCategory);
+    }, [region]);
 
 
     const handleCountrySelect = async (item) => {
-        setCountry(item);
-        setIsCountryModalVisible(false);
-        await AsyncStorage.setItem("userSelectedCountry", JSON.stringify(item));
+        changeRegion(item);
+        setIsCountryModalVisible(false); // Close modal
 
         // Update User Profile location on backend if logged in
         if (userId) {
@@ -487,7 +453,7 @@ const HomeScreen = ({ navigation }) => {
                 {item.discountPercentage ? (
                     <Text style={styles.bannerPrice}>{item.discountPercentage}% OFF</Text>
                 ) : (
-                    item.price && <Text style={styles.bannerPrice}>₹{item.price}</Text>
+                    item.price && <Text style={styles.bannerPrice}>{formatPrice(item.price)}</Text>
                 )}
             </View>
         </AnimatedButton>
@@ -554,7 +520,7 @@ const HomeScreen = ({ navigation }) => {
                         <Text style={styles.ratingText}>{item.rating || '4.5'} ({item.reviews || 0})</Text>
                     </View>
                     <View style={styles.priceRow}>
-                        <Text style={styles.productPrice}>₹{item.price}</Text>
+                        <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
                         <AnimatedButton style={styles.addToCartBtn} onPress={() => addToCart(item)}>
                             <Ionicons name="add" size={20} color="#fff" />
                         </AnimatedButton>
@@ -599,9 +565,9 @@ const HomeScreen = ({ navigation }) => {
 
                     {/* Region Selector (Right Side) */}
                     <TouchableOpacity style={styles.regionSelector} onPress={() => setIsCountryModalVisible(true)}>
-                        <Text style={{ fontSize: 18 }}>{country.flag}</Text>
+                        <Text style={{ fontSize: 18 }}>{region.flag}</Text>
                         <Text style={{ fontSize: 12, color: '#fff', fontWeight: 'bold', marginHorizontal: 2 }}>
-                            {country.code === 'Global' ? 'GL' : country.code}
+                            {region.code === 'Global' ? 'GL' : region.code}
                         </Text>
                         <Ionicons name="caret-down" size={10} color="#ccc" />
                     </TouchableOpacity>
@@ -716,13 +682,13 @@ const HomeScreen = ({ navigation }) => {
                                         source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4076/4076432.png' }}
                                         style={styles.emptyImage}
                                     />
-                                    <Text style={styles.emptyTitle}>No items in {country.name}</Text>
+                                    <Text style={styles.emptyTitle}>No items in {region.name}</Text>
                                     <Text style={styles.emptySubTitle}>
                                         We couldn't find any products or reels in this region yet.
                                     </Text>
                                     <TouchableOpacity
                                         style={styles.globalButton}
-                                        onPress={() => setCountry({ code: 'Global', name: 'Global Store', flag: '🌍' })}
+                                        onPress={() => changeRegion({ code: 'Global', name: 'Global Store', flag: '🌍' })}
                                     >
                                         <Text style={styles.globalButtonText}>Switch to Global Store 🌍</Text>
                                     </TouchableOpacity>
@@ -773,14 +739,14 @@ const HomeScreen = ({ navigation }) => {
                             keyExtractor={item => item.code}
                             renderItem={({ item }) => (
                                 <TouchableOpacity
-                                    style={[styles.countryItem, country.code === item.code && styles.selectedCountry]}
+                                    style={[styles.countryItem, region.code === item.code && styles.selectedCountry]}
                                     onPress={() => handleCountrySelect(item)}
                                 >
                                     <Text style={styles.countryFlag}>{item.flag}</Text>
-                                    <Text style={[styles.countryName, country.code === item.code && { fontWeight: 'bold', color: '#E50914' }]}>
+                                    <Text style={[styles.countryName, region.code === item.code && { fontWeight: 'bold', color: '#E50914' }]}>
                                         {item.name}
                                     </Text>
-                                    {country.code === item.code && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                                    {region.code === item.code && <Ionicons name="checkmark" size={20} color="#E50914" />}
                                 </TouchableOpacity>
                             )}
                         />
