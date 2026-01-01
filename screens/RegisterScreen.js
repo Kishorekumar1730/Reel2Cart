@@ -47,161 +47,189 @@ const RegisterScreen = () => {
           mode: 'signup'
         });
       } else {
-        setError(data.message || 'Failed to send OTP');
+        setError(data.message || t('failedSendOtp'));
       }
     } catch (error) {
       console.error('Error sending OTP:', error);
-      setError('Network error. Please try again.');
+      setError(t('networkError'));
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.container}>
-            <Image source={require("../assets/simple-logo.png")} style={styles.logo} />
+    <LinearGradient
+      colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+      style={styles.gradientBackground}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
+          style={{ flex: 1 }}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.container}>
+              <Image source={require("../assets/simple-logo.png")} style={styles.logo} />
 
-            <View style={styles.formContainer}>
-              <Text style={styles.title}>{t('signUpTitle')}</Text>
+              <View style={styles.cardContainer}>
+                <Text style={styles.title}>{t('signUpTitle')}</Text>
 
-              <TextInput
-                value={input}
-                onChangeText={(text) => {
-                  setInput(text);
-                  setError("");
-                }}
-                placeholder={t('enterEmail')}
-                placeholderTextColor="#888"
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+                <TextInput
+                  value={input}
+                  onChangeText={(text) => {
+                    setInput(text);
+                    setError("");
+                  }}
+                  placeholder={t('enterEmail')}
+                  placeholderTextColor="#888"
+                  style={styles.input}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
 
-              {error !== "" && <Text style={styles.errorText}>{error}</Text>}
+                {error !== "" && <Text style={styles.errorText}>{error}</Text>}
 
-              <LinearGradient
-                colors={["#00008B", "#FF0000"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradient}
-              >
-                <AnimatedButton style={styles.button} onPress={handleContinue}>
-                  <Text style={styles.buttonText}>{t('continue')}</Text>
-                </AnimatedButton>
-              </LinearGradient>
+                <LinearGradient
+                  colors={["#E50914", "#B20710"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonGradient}
+                >
+                  <AnimatedButton style={styles.button} onPress={handleContinue}>
+                    <Text style={styles.buttonText}>{t('continue')}</Text>
+                  </AnimatedButton>
+                </LinearGradient>
 
-              <Text style={styles.agreeText}>
-                {t('agreePrefix')}{" "}
-                <Text style={styles.link} onPress={() => Linking.openURL("https://example.com/terms")}>
-                  {t('condition')}
-                </Text>{" "}
-                {t('and')}{" "}
-                <Text style={styles.link} onPress={() => Linking.openURL("https://example.com/privacy")}>
-                  {t('privacyNotice')}
+                <Text style={styles.agreeText}>
+                  {t('agreePrefix')}{" "}
+                  <Text style={styles.link} onPress={() => Linking.openURL("https://example.com/terms")}>
+                    {t('condition')}
+                  </Text>{" "}
+                  {t('and')}{" "}
+                  <Text style={styles.link} onPress={() => Linking.openURL("https://example.com/privacy")}>
+                    {t('privacyNotice')}
+                  </Text>
+                  .
                 </Text>
-                .
-              </Text>
-            </View>
+              </View>
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.line} />
-              <Text style={styles.orText}>{t('or')}</Text>
-              <View style={styles.line} />
-            </View>
+              <View style={styles.dividerContainer}>
+                <View style={styles.line} />
+                <Text style={styles.orText}>{t('or')}</Text>
+                <View style={styles.line} />
+              </View>
 
-            <AnimatedButton onPress={() => navigation.navigate("Login", { language })}>
-              <Text style={styles.createAccount}>{t('alreadyHaveAccount')}</Text>
-            </AnimatedButton>
-
-            <View style={styles.footer}>
-              <AnimatedButton onPress={() => Linking.openURL("https://example.com/terms")}>
-                <Text style={styles.footerLink}>{t('condition')}</Text>
+              <AnimatedButton
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate("Login", { language })}
+              >
+                <Text style={styles.createAccount}>{t('alreadyHaveAccount')}</Text>
               </AnimatedButton>
-              <AnimatedButton onPress={() => Linking.openURL("https://example.com/privacy")}>
-                <Text style={styles.footerLink}>{t('privacyNotice')}</Text>
-              </AnimatedButton>
-              <AnimatedButton onPress={() => Linking.openURL("https://example.com/help")}>
-                <Text style={styles.footerLink}>{t('help')}</Text>
-              </AnimatedButton>
-            </View>
 
-            <Text style={styles.footerText}>© 2025, Reel2Cart</Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              <View style={styles.footer}>
+                <AnimatedButton onPress={() => Linking.openURL("https://example.com/terms")}>
+                  <Text style={styles.footerLink}>{t('condition')}</Text>
+                </AnimatedButton>
+                <AnimatedButton onPress={() => Linking.openURL("https://example.com/privacy")}>
+                  <Text style={styles.footerLink}>{t('privacyNotice')}</Text>
+                </AnimatedButton>
+                <AnimatedButton onPress={() => Linking.openURL("https://example.com/help")}>
+                  <Text style={styles.footerLink}>{t('help')}</Text>
+                </AnimatedButton>
+              </View>
+
+              <Text style={styles.footerText}>© 2025, Reel2Cart</Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 export default RegisterScreen;
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   scrollContainer: {
     flexGrow: 1,
+    justifyContent: 'center',
   },
   container: {
     flex: 1,
-    paddingHorizontal: wp(5),
-    backgroundColor: "#fff",
+    paddingHorizontal: wp(6),
     alignItems: "center",
-    maxWidth: 600, // Tablet support
+    maxWidth: 600,
     width: '100%',
     alignSelf: 'center',
-    paddingBottom: hp(5),
+    paddingVertical: hp(2),
   },
   logo: {
     width: wp(40),
-    height: hp(8),
+    height: wp(30),
     resizeMode: "contain",
     marginTop: hp(2),
     marginBottom: hp(3),
   },
-  formContainer: {
+  cardContainer: {
     width: '100%',
-    marginBottom: hp(2),
+    backgroundColor: 'rgba(255, 255, 255, 0.6)', // Glassy effect
+    borderRadius: 20,
+    padding: wp(6),
+    marginBottom: hp(3),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: "rgba(0,0,0,0.05)",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   title: {
-    fontSize: normalize(20),
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: hp(2),
-    alignSelf: "center", // Centered for professional look
+    fontSize: normalize(22),
+    fontWeight: "800",
+    color: "#333",
+    marginBottom: hp(3),
     textAlign: "center",
   },
   input: {
     width: "100%",
-    height: hp(6), // Responsive height
-    minHeight: 48,
+    height: hp(6.5),
+    minHeight: 50,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: normalize(14),
+    borderColor: "rgba(0,0,0,0.1)",
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    fontSize: normalize(15),
     backgroundColor: "#fff",
     marginBottom: hp(2),
+    color: '#333',
   },
   errorText: {
-    color: "#D32F2F",
+    color: "#E50914",
     fontSize: normalize(13),
-    marginBottom: hp(1),
-    alignSelf: "flex-start",
+    marginBottom: hp(1.5),
+    textAlign: 'center',
   },
-  gradient: {
+  buttonGradient: {
     width: "100%",
-    height: hp(6),
-    minHeight: 48,
-    borderRadius: 25,
+    height: hp(6.5),
+    minHeight: 50,
+    borderRadius: 30, // Pill shape
     marginBottom: hp(2),
     justifyContent: "center",
+    shadowColor: "#E50914",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   button: {
     flex: 1,
@@ -211,15 +239,14 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: normalize(16),
+    fontSize: normalize(17),
+    letterSpacing: 0.5,
   },
   agreeText: {
     fontSize: normalize(12),
-    color: "#333",
+    color: "#666",
     textAlign: "center",
-    marginVertical: hp(1.5),
-    paddingHorizontal: wp(2),
-    fontStyle: "italic",
+    marginTop: hp(1),
     lineHeight: normalize(18),
   },
   link: {
@@ -230,43 +257,47 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginVertical: hp(2),
-    width: "100%",
+    width: "80%",
   },
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: "#bbb",
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   orText: {
     marginHorizontal: 10,
-    fontSize: normalize(13),
-    color: "#666",
+    fontSize: normalize(14),
+    color: "#777",
+    fontWeight: '500',
+  },
+  secondaryButton: {
+    marginBottom: hp(4),
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   createAccount: {
     fontSize: normalize(16),
-    color: "#000",
-    fontWeight: "600",
+    color: "#333",
+    fontWeight: "700",
     textDecorationLine: "underline",
-    marginBottom: hp(3),
   },
   footer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
+    justifyContent: "space-between",
+    width: "80%", // Narrower footer
     paddingTop: hp(2),
     borderTopWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "rgba(0,0,0,0.05)",
     marginBottom: hp(1),
   },
   footerLink: {
-    fontSize: normalize(13),
-    color: "#007AFF",
-    textDecorationLine: "underline",
+    fontSize: normalize(12),
+    color: "#666",
   },
   footerText: {
     fontSize: normalize(11),
-    color: "#444",
+    color: "#999",
     textAlign: "center",
-    marginTop: hp(1),
+    marginTop: hp(0.5),
   },
 });

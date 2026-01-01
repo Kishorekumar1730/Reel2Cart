@@ -1,24 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, Animated } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_BASE_URL } from '../config/apiConfig';
+import { useAlert } from '../context/AlertContext';
+
+const { width, height } = Dimensions.get('window');
 
 // InputField Component
 const InputField = ({ label, value, onChangeText, placeholder, icon, keyboardType = 'default', multiline = false, autoCapitalize = 'sentences', maxLength }) => (
     <View style={styles.inputContainer}>
         <Text style={styles.label}>{label}</Text>
         <View style={[styles.inputWrapper, multiline && styles.multilineWrapper]}>
-            <Ionicons name={icon} size={20} color="#666" style={styles.inputIcon} />
+            <Ionicons name={icon} size={20} color="#6B7280" style={styles.inputIcon} />
             <TextInput
                 style={[styles.input, multiline && styles.multilineInput]}
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={placeholder}
-                placeholderTextColor="#999"
+                placeholderTextColor="#9CA3AF"
                 keyboardType={keyboardType}
                 multiline={multiline}
                 autoCapitalize={autoCapitalize}
@@ -34,16 +37,28 @@ const AccountTypeSelector = ({ selected, onSelect }) => (
         <TouchableOpacity
             style={[styles.typeOption, selected === 'licensed' && styles.typeOptionActive]}
             onPress={() => onSelect('licensed')}
+            activeOpacity={0.8}
         >
-            <Ionicons name="business" size={24} color={selected === 'licensed' ? '#E50914' : '#666'} />
-            <Text style={[styles.typeText, selected === 'licensed' && styles.typeTextActive]}>Licensed Business</Text>
+            <LinearGradient
+                colors={selected === 'licensed' ? ['#FEE2E2', '#FECACA'] : ['#F9FAFB', '#F9FAFB']}
+                style={styles.typeOptionGradient}
+            >
+                <MaterialCommunityIcons name="briefcase-check" size={28} color={selected === 'licensed' ? '#DC2626' : '#9CA3AF'} />
+                <Text style={[styles.typeText, selected === 'licensed' && styles.typeTextActive]}>Licensed</Text>
+            </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity
             style={[styles.typeOption, selected === 'local' && styles.typeOptionActive]}
             onPress={() => onSelect('local')}
+            activeOpacity={0.8}
         >
-            <Ionicons name="storefront" size={24} color={selected === 'local' ? '#E50914' : '#666'} />
-            <Text style={[styles.typeText, selected === 'local' && styles.typeTextActive]}>Local Business</Text>
+            <LinearGradient
+                colors={selected === 'local' ? ['#FEE2E2', '#FECACA'] : ['#F9FAFB', '#F9FAFB']}
+                style={styles.typeOptionGradient}
+            >
+                <MaterialCommunityIcons name="storefront" size={28} color={selected === 'local' ? '#DC2626' : '#9CA3AF'} />
+                <Text style={[styles.typeText, selected === 'local' && styles.typeTextActive]}>Local</Text>
+            </LinearGradient>
         </TouchableOpacity>
     </View>
 );
@@ -53,13 +68,14 @@ const ProofTypeSelector = ({ selected, onSelect }) => {
     const proofs = ['GSTIN', 'Business PAN', 'Udyam Aadhar', 'FSSAI'];
     return (
         <View style={styles.proofOptionsContainer}>
-            <Text style={styles.fieldLabel}>Select Valid Proof Document:</Text>
+            <Text style={styles.fieldLabel}>Select Verified Proof:</Text>
             <View style={styles.proofBadges}>
                 {proofs.map((proof) => (
                     <TouchableOpacity
                         key={proof}
                         style={[styles.proofBadge, selected === proof && styles.proofBadgeActive]}
                         onPress={() => onSelect(proof)}
+                        activeOpacity={0.7}
                     >
                         <Text style={[styles.proofText, selected === proof && styles.proofTextActive]}>{proof}</Text>
                     </TouchableOpacity>
@@ -72,36 +88,43 @@ const ProofTypeSelector = ({ selected, onSelect }) => {
 // StepIndicator Component
 const StepIndicator = ({ step }) => (
     <View style={styles.stepContainer}>
+        <View style={styles.line} />
+        <View style={[styles.lineActive, { width: step === 1 ? '5%' : step === 2 ? '50%' : '95%' }]} />
         {[1, 2, 3].map((s) => (
             <View key={s} style={styles.stepWrapper}>
                 <View style={[styles.stepCircle, step >= s ? styles.activeStep : styles.inactiveStep]}>
-                    <Text style={[styles.stepText, step >= s ? styles.activeStepText : styles.inactiveStepText]}>{s}</Text>
+                    {step > s ? (
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                    ) : (
+                        <Text style={[styles.stepText, step >= s ? styles.activeStepText : styles.inactiveStepText]}>{s}</Text>
+                    )}
                 </View>
-                <Text style={styles.stepLabel}>{s === 1 ? "Contact" : s === 2 ? "Business" : "Address"}</Text>
+                <Text style={[styles.stepLabel, step >= s && styles.activeStepLabel]}>
+                    {s === 1 ? "Contact" : s === 2 ? "Business" : "Address"}
+                </Text>
             </View>
         ))}
-        <View style={styles.line} />
-        <View style={[styles.lineActive, { width: step === 1 ? '15%' : step === 2 ? '50%' : '85%' }]} />
     </View>
 );
 
 const SellerRegistrationScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
+    const { showAlert, showSuccess } = useAlert();
     const [loading, setLoading] = useState(false);
     const [userId, setUserId] = useState(null);
     const [step, setStep] = useState(1);
 
     // Form Stats
     const [accountType, setAccountType] = useState('licensed');
-    const [proofType, setProofType] = useState('GSTIN'); // Default proof for licensed
+    const [proofType, setProofType] = useState('GSTIN');
 
     const [sellerName, setSellerName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
 
     const [businessName, setBusinessName] = useState('');
-    const [licenseNumber, setLicenseNumber] = useState(''); // Single dynamic field
-
+    const [licenseNumber, setLicenseNumber] = useState('');
     const [businessAddress, setBusinessAddress] = useState('');
 
     useEffect(() => {
@@ -118,34 +141,29 @@ const SellerRegistrationScreen = () => {
         fetchUser();
     }, []);
 
-    // Validation Helpers
-    const validateGSTIN = (input) => /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(input);
-    const validatePAN = (input) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(input);
-
     const handleNext = async () => {
         if (step === 1) {
             if (!sellerName || !email || !phone) {
-                Alert.alert("Missing Details", "Please fill in all contact details.");
+                showAlert("Missing Details", "Please fill in all contact details.");
                 return;
             }
             if (!/^\d{10}$/.test(phone)) {
-                Alert.alert("Invalid Phone", "Please enter a valid 10-digit mobile number.");
+                showAlert("Invalid Phone", "Please enter a valid 10-digit mobile number.");
                 return;
             }
             setStep(2);
         } else if (step === 2) {
             if (!businessName) {
-                Alert.alert("Missing Details", "Please enter your Business Name.");
+                showAlert("Missing Details", "Please enter your Business Name.");
                 return;
             }
 
             if (accountType === 'licensed') {
                 if (!licenseNumber) {
-                    Alert.alert("Missing Proof", `Please enter your ${proofType} number.`);
+                    showAlert("Missing Proof", `Please enter your ${proofType} number.`);
                     return;
                 }
 
-                // Call Backend to Verify
                 setLoading(true);
                 try {
                     const res = await fetch(`${API_BASE_URL}/seller/validate-proof`, {
@@ -157,18 +175,15 @@ const SellerRegistrationScreen = () => {
                     setLoading(false);
 
                     if (!res.ok || !data.valid) {
-                        Alert.alert("Verification Failed", data.message || "Invalid Proof Document.");
+                        showAlert("Verification Failed", data.message || "Invalid Proof Document.");
                         return;
                     }
 
-                    // Success - Proceed
-                    Alert.alert("Verified", "Your business proof has been verified successfully.", [
-                        { text: "Continue", onPress: () => setStep(3) }
-                    ]);
+                    showSuccess("Business Verified Successfully!", () => setStep(3));
 
                 } catch (error) {
                     setLoading(false);
-                    Alert.alert("Error", "Unable to verify proof. Check network.");
+                    showAlert("Error", "Unable to verify proof. Check network.");
                     return;
                 }
             } else {
@@ -179,13 +194,12 @@ const SellerRegistrationScreen = () => {
 
     const handleRegister = async () => {
         if (!businessAddress) {
-            Alert.alert("Missing Details", "Please enter your registered business address.");
+            showAlert("Missing Details", "Please enter your registered business address.");
             return;
         }
 
         setLoading(true);
         try {
-            // Construct payload dynamically based on chosen proof
             const payload = {
                 userId,
                 accountType,
@@ -216,200 +230,244 @@ const SellerRegistrationScreen = () => {
             if (response.ok) {
                 const successMsg = accountType === 'licensed'
                     ? "Welcome to Reel2Cart Business! Your account is active."
-                    : "Application Submitted! Our team will review your local business application and notify you via email.";
+                    : "Application Submitted! Our team will review your application.";
 
-                Alert.alert("Success", successMsg, [
-                    {
-                        text: "Go to Dashboard",
-                        onPress: () => navigation.reset({
-                            index: 0,
-                            routes: [
-                                { name: 'Home' }, // Stack base
-                                { name: 'SellerDashboard' } // Active screen
-                            ],
-                        })
-                    }
-                ]);
+                showSuccess(successMsg, () => {
+                    navigation.reset({
+                        index: 0,
+                        routes: [
+                            { name: 'Home' },
+                            { name: 'SellerDashboard' }
+                        ],
+                    });
+                });
             } else {
-                Alert.alert("Registration Failed", data.message || "Something went wrong.");
+                showAlert("Registration Failed", data.message || "Something went wrong.");
             }
         } catch (error) {
             console.error(error);
-            Alert.alert("Error", "Network error. Please try again.");
+            showAlert("Error", "Network error. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <LinearGradient colors={["#E50914", "#B20710"]} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Seller Registration</Text>
-                    <View style={{ width: 24 }} />
-                </View>
-            </LinearGradient>
-
-            <StepIndicator step={step} />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={{ flex: 1 }}
+        <View style={styles.masterContainer}>
+            <LinearGradient
+                colors={['#F9F9FF', '#E8DFF5', '#CBF1F5']}
+                style={styles.container}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                    {step === 1 && (
-                        <View>
-                            <Text style={styles.sectionHeader}>Step 1: Contact Details</Text>
-                            <Text style={styles.sectionSubHeader}>Let's start with your basic contact information.</Text>
-
-                            <InputField
-                                label="Full Name"
-                                value={sellerName}
-                                onChangeText={setSellerName}
-                                placeholder="Your Name"
-                                icon="person-outline"
-                            />
-                            <InputField
-                                label="Email Address"
-                                value={email}
-                                onChangeText={setEmail}
-                                placeholder="business@example.com"
-                                icon="mail-outline"
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
-                            <InputField
-                                label="Mobile Number"
-                                value={phone}
-                                onChangeText={setPhone}
-                                placeholder="10-digit number"
-                                icon="call-outline"
-                                keyboardType="phone-pad"
-                                maxLength={10}
-                            />
-                        </View>
-                    )}
-
-                    {step === 2 && (
-                        <View>
-                            <Text style={styles.sectionHeader}>Step 2: Business & Tax</Text>
-                            <Text style={styles.sectionSubHeader}>Select your business type and verify.</Text>
-
-                            <AccountTypeSelector selected={accountType} onSelect={setAccountType} />
-
-                            <InputField
-                                label="Business Name"
-                                value={businessName}
-                                onChangeText={setBusinessName}
-                                placeholder="e.g. Reel2Cart Retail"
-                                icon="briefcase-outline"
-                            />
-
-                            {accountType === 'licensed' ? (
-                                <>
-                                    <ProofTypeSelector selected={proofType} onSelect={(t) => { setProofType(t); setLicenseNumber(''); }} />
-
-                                    <InputField
-                                        label={`${proofType} Number`}
-                                        value={licenseNumber}
-                                        onChangeText={(text) => setLicenseNumber(text.toUpperCase())}
-                                        placeholder={`Enter your ${proofType}`}
-                                        icon="document-text-outline"
-                                        autoCapitalize="characters"
-                                    />
-
-                                    <View style={styles.infoBox}>
-                                        <Ionicons name="shield-checkmark" size={20} color="#1976D2" />
-                                        <Text style={styles.infoText}>We verify your {proofType} to enable instant payouts and trust badges.</Text>
-                                    </View>
-                                </>
-                            ) : (
-                                <View style={styles.warningBox}>
-                                    <Ionicons name="alert-circle" size={24} color="#E65100" />
-                                    <Text style={styles.warningText}>
-                                        Local businesses without license certificates are subject to manual verification by Reel2Cart Admin.
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
-
-                    {step === 3 && (
-                        <View>
-                            <Text style={styles.sectionHeader}>Step 3: Location</Text>
-                            <Text style={styles.sectionSubHeader}>Where should we pick up your products?</Text>
-
-                            <InputField
-                                label="Registered Business Address"
-                                value={businessAddress}
-                                onChangeText={setBusinessAddress}
-                                placeholder="Store No, Street, City, State, Pincode"
-                                icon="location-outline"
-                                multiline={true}
-                            />
-
-                            <View style={styles.summaryBox}>
-                                <Text style={styles.summaryTitle}>Summary</Text>
-                                <Text style={styles.summaryText}>• Type: {accountType === 'licensed' ? 'Licensed' : 'Local Business'}</Text>
-                                <Text style={styles.summaryText}>• Name: {businessName}</Text>
-                                {accountType === 'licensed' && <Text style={styles.summaryText}>• {proofType}: {licenseNumber}</Text>}
-                            </View>
-                        </View>
-                    )}
-
-                    <View style={styles.footerButtons}>
-                        {step < 3 ? (
-                            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                                <Text style={styles.nextButtonText}>Next Step</Text>
-                                <Ionicons name="arrow-forward" size={20} color="#fff" style={{ marginLeft: 5 }} />
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity style={styles.submitButton} onPress={handleRegister} disabled={loading}>
-                                {loading ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.submitButtonText}>{accountType === 'licensed' ? 'Complete Registration' : 'Submit for Approval'}</Text>
-                                )}
-                            </TouchableOpacity>
-                        )}
+                <SafeAreaView style={styles.safeArea}>
+                    <View style={styles.header}>
+                        <TouchableOpacity
+                            onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()}
+                            style={styles.backButton}
+                        >
+                            <Ionicons name="arrow-back" size={24} color="#1F2937" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Join as Seller</Text>
+                        <View style={{ width: 40 }} />
                     </View>
 
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+                    <StepIndicator step={step} />
+
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === "ios" ? "padding" : "height"}
+                        style={{ flex: 1 }}
+                    >
+                        <ScrollView
+                            contentContainerStyle={styles.scrollContent}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            <View style={styles.formCard}>
+                                {step === 1 && (
+                                    <View>
+                                        <Text style={styles.sectionHeader}>Personal Info</Text>
+                                        <Text style={styles.sectionSubHeader}>Identity details for owner/manager.</Text>
+
+                                        <InputField
+                                            label="Full Name"
+                                            value={sellerName}
+                                            onChangeText={setSellerName}
+                                            placeholder="Your Name"
+                                            icon="person-outline"
+                                        />
+                                        <InputField
+                                            label="Work Email"
+                                            value={email}
+                                            onChangeText={setEmail}
+                                            placeholder="business@example.com"
+                                            icon="mail-outline"
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                        />
+                                        <InputField
+                                            label="Mobile"
+                                            value={phone}
+                                            onChangeText={setPhone}
+                                            placeholder="10-digit number"
+                                            icon="call-outline"
+                                            keyboardType="phone-pad"
+                                            maxLength={10}
+                                        />
+                                    </View>
+                                )}
+
+                                {step === 2 && (
+                                    <View>
+                                        <Text style={styles.sectionHeader}>Business Details</Text>
+                                        <Text style={styles.sectionSubHeader}>Select your business type and verify documents.</Text>
+
+                                        <AccountTypeSelector selected={accountType} onSelect={setAccountType} />
+
+                                        <InputField
+                                            label="Business Name"
+                                            value={businessName}
+                                            onChangeText={setBusinessName}
+                                            placeholder="e.g. Acme Retail"
+                                            icon="business-outline"
+                                        />
+
+                                        {accountType === 'licensed' ? (
+                                            <View style={{ marginTop: 10 }}>
+                                                <ProofTypeSelector
+                                                    selected={proofType}
+                                                    onSelect={(t) => { setProofType(t); setLicenseNumber(''); }}
+                                                />
+
+                                                <InputField
+                                                    label={`${proofType} ID`}
+                                                    value={licenseNumber}
+                                                    onChangeText={(text) => setLicenseNumber(text.toUpperCase())}
+                                                    placeholder={`Enter ${proofType}`}
+                                                    icon="document-text-outline"
+                                                    autoCapitalize="characters"
+                                                />
+
+                                                <View style={styles.infoBox}>
+                                                    <LinearGradient
+                                                        colors={['#EFF6FF', '#DBEAFE']}
+                                                        style={styles.infoBoxGradient}
+                                                    >
+                                                        <MaterialCommunityIcons name="shield-check" size={20} color="#2563EB" />
+                                                        <Text style={styles.infoText}>Document is verified instantly for licensed sellers.</Text>
+                                                    </LinearGradient>
+                                                </View>
+                                            </View>
+                                        ) : (
+                                            <View style={styles.warningBox}>
+                                                <MaterialCommunityIcons name="alert-circle" size={24} color="#D97706" />
+                                                <Text style={styles.warningText}>
+                                                    Manual verification required for local shops. Reviews take 24-48 hours.
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+
+                                {step === 3 && (
+                                    <View>
+                                        <Text style={styles.sectionHeader}>Store Location</Text>
+                                        <Text style={styles.sectionSubHeader}>Pickup and shipping origin address.</Text>
+
+                                        <InputField
+                                            label="Full Address"
+                                            value={businessAddress}
+                                            onChangeText={setBusinessAddress}
+                                            placeholder="Street, City, Pincode"
+                                            icon="location-outline"
+                                            multiline={true}
+                                        />
+
+                                        <View style={styles.summaryCard}>
+                                            <Text style={styles.summaryLabel}>Registration Summary</Text>
+                                            <View style={styles.summaryRow}>
+                                                <Text style={styles.summaryKey}>Type</Text>
+                                                <Text style={styles.summaryVal}>{accountType === 'licensed' ? 'Licensed' : 'Local Business'}</Text>
+                                            </View>
+                                            <View style={styles.summaryRow}>
+                                                <Text style={styles.summaryKey}>Store</Text>
+                                                <Text style={styles.summaryVal}>{businessName}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+
+                            <View style={styles.footer}>
+                                {step < 3 ? (
+                                    <TouchableOpacity activeOpacity={0.9} onPress={handleNext}>
+                                        <LinearGradient
+                                            colors={['#FF512F', '#DD2476']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.actionButton}
+                                        >
+                                            <Text style={styles.actionButtonText}>Continue</Text>
+                                            <Ionicons name="chevron-forward" size={18} color="#fff" />
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity activeOpacity={0.9} onPress={handleRegister} disabled={loading}>
+                                        <LinearGradient
+                                            colors={['#10B981', '#059669']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.actionButton}
+                                        >
+                                            {loading ? (
+                                                <ActivityIndicator color="#fff" />
+                                            ) : (
+                                                <>
+                                                    <Text style={styles.actionButtonText}>
+                                                        {accountType === 'licensed' ? 'Start Business' : 'Submit Review'}
+                                                    </Text>
+                                                    <Ionicons name="checkmark-circle" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                                                </>
+                                            )}
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
+                </SafeAreaView>
+            </LinearGradient>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
+    masterContainer: { flex: 1 },
+    container: { flex: 1 },
+    safeArea: { flex: 1 },
     header: {
-        paddingVertical: 15,
-        paddingHorizontal: 15,
-        elevation: 4,
-    },
-    headerContent: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        paddingHorizontal: 20,
+        paddingVertical: 15,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#fff",
+        fontSize: 19,
+        fontWeight: '700',
+        color: '#111827',
     },
     stepContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 40,
-        paddingTop: 20,
-        marginBottom: 10,
+        paddingTop: 10,
+        marginBottom: 20,
         position: 'relative',
     },
     stepWrapper: {
@@ -417,246 +475,185 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     stepCircle: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 5,
-        backgroundColor: '#f5f5f5',
-        borderWidth: 2,
-        borderColor: '#ddd',
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        marginBottom: 6,
     },
     activeStep: {
-        backgroundColor: '#E50914',
-        borderColor: '#E50914',
+        backgroundColor: '#DD2476',
+        borderColor: '#DD2476',
     },
     inactiveStep: {
-        backgroundColor: '#fff',
-        borderColor: '#ccc',
+        backgroundColor: '#F9FAFB',
+        borderColor: '#E5E7EB',
     },
-    stepText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    activeStepText: {
-        color: '#fff',
-    },
-    inactiveStepText: {
-        color: '#777',
-    },
-    stepLabel: {
-        fontSize: 12,
-        color: '#555',
-    },
+    stepText: { fontSize: 13, fontWeight: '700' },
+    activeStepText: { color: '#fff' },
+    inactiveStepText: { color: '#9CA3AF' },
+    stepLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+    activeStepLabel: { color: '#111827', fontWeight: '700' },
     line: {
         position: 'absolute',
-        top: 35,
-        left: 40,
-        right: 40,
+        top: 26,
+        left: 60,
+        right: 60,
         height: 2,
-        backgroundColor: '#eee',
+        backgroundColor: '#E5E7EB',
         zIndex: 1,
     },
     lineActive: {
         position: 'absolute',
-        top: 35,
-        left: 40,
+        top: 26,
+        left: 60,
         height: 2,
-        backgroundColor: '#E50914',
+        backgroundColor: '#DD2476',
         zIndex: 1,
     },
     scrollContent: {
-        padding: 20,
+        paddingHorizontal: 20,
         paddingBottom: 40,
+    },
+    formCard: {
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderRadius: 24,
+        padding: 24,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+        marginBottom: 20,
     },
     sectionHeader: {
         fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 5,
+        fontWeight: '800',
+        color: '#111827',
+        letterSpacing: -0.5,
     },
     sectionSubHeader: {
         fontSize: 14,
-        color: '#666',
-        marginBottom: 25,
+        color: '#6B7280',
+        marginTop: 4,
+        marginBottom: 24,
     },
-    inputContainer: {
-        marginBottom: 20,
-    },
+    inputContainer: { marginBottom: 18 },
     label: {
         fontSize: 14,
-        color: '#333',
+        fontWeight: '600',
+        color: '#374151',
         marginBottom: 8,
-        fontWeight: '500',
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        backgroundColor: '#fafafa',
-        paddingHorizontal: 10,
-        height: 50,
+        borderColor: '#E5E7EB',
+        paddingHorizontal: 14,
+        height: 54,
     },
     multilineWrapper: {
         height: 100,
+        paddingTop: 14,
         alignItems: 'flex-start',
-        paddingTop: 10,
     },
-    inputIcon: {
-        marginRight: 10,
-    },
+    inputIcon: { marginRight: 12 },
     input: {
         flex: 1,
         fontSize: 16,
-        color: '#333',
+        color: '#111827',
+        fontWeight: '500',
     },
-    multilineInput: {
-        textAlignVertical: 'top',
-        height: '100%',
-    },
-    infoBox: {
-        flexDirection: 'row',
-        backgroundColor: '#E3F2FD',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 20,
-        alignItems: 'flex-start',
-    },
-    infoText: {
-        color: '#0D47A1',
-        marginLeft: 10,
-        fontSize: 12,
-        flex: 1,
-    },
-    warningBox: {
-        flexDirection: 'row',
-        backgroundColor: '#FFF3E0',
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 20,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#FFE0B2',
-    },
-    warningText: {
-        color: '#E65100',
-        marginLeft: 10,
-        fontSize: 13,
-        flex: 1,
-    },
-    summaryBox: {
-        backgroundColor: '#f9f9f9',
-        padding: 15,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#eee',
-        marginBottom: 20,
-    },
-    summaryTitle: {
-        fontWeight: 'bold',
-        marginBottom: 5,
-        fontSize: 14,
-    },
-    summaryText: {
-        fontSize: 13,
-        color: '#555',
-        marginBottom: 3,
-    },
-    footerButtons: {
-        marginTop: 10,
-    },
-    nextButton: {
-        backgroundColor: '#E50914',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 15,
-        borderRadius: 8,
-        elevation: 2,
-    },
-    nextButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    submitButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 15,
-        borderRadius: 8,
-        alignItems: 'center',
-        elevation: 2,
-    },
-    submitButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    multilineInput: { textAlignVertical: 'top' },
     typeContainer: {
         flexDirection: 'row',
-        marginBottom: 20,
-        justifyContent: 'space-between',
+        gap: 12,
+        marginBottom: 24,
     },
     typeOption: {
         flex: 1,
+        height: 100,
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    typeOptionGradient: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        padding: 15,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        marginHorizontal: 5,
-        backgroundColor: '#fff',
     },
-    typeOptionActive: {
-        borderColor: '#E50914',
-        backgroundColor: '#FFF0F1',
-    },
-    typeText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '600',
-    },
-    typeTextActive: {
-        color: '#E50914',
-    },
-    proofOptionsContainer: {
-        marginBottom: 20,
-    },
-    fieldLabel: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 10,
-        fontWeight: '500',
-    },
-    proofBadges: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
+    typeOptionActive: { borderColor: '#FECACA' },
+    typeText: { fontSize: 13, fontWeight: '700', marginTop: 8, color: '#9CA3AF' },
+    typeTextActive: { color: '#DC2626' },
+    proofOptionsContainer: { marginBottom: 20 },
+    fieldLabel: { fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: 12 },
+    proofBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     proofBadge: {
         paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 20,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
         borderWidth: 1,
-        borderColor: '#ddd',
-        marginRight: 10,
-        marginBottom: 10,
-        backgroundColor: '#f9f9f9',
+        borderColor: '#E5E7EB',
     },
     proofBadgeActive: {
-        backgroundColor: '#E50914',
-        borderColor: '#E50914',
+        backgroundColor: '#111827',
+        borderColor: '#111827',
     },
-    proofText: {
-        color: '#555',
-        fontSize: 12,
-        fontWeight: '500',
+    proofText: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+    proofTextActive: { color: '#fff' },
+    infoBox: { marginTop: 16 },
+    infoBoxGradient: {
+        flexDirection: 'row',
+        padding: 14,
+        borderRadius: 14,
+        alignItems: 'center',
     },
-    proofTextActive: {
-        color: '#fff',
+    infoText: { color: '#1E40AF', fontSize: 12, fontWeight: '600', marginLeft: 10, flex: 1 },
+    warningBox: {
+        flexDirection: 'row',
+        backgroundColor: '#FFFBEB',
+        padding: 16,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#FEF3C7',
+        alignItems: 'flex-start',
+        marginTop: 10,
     },
+    warningText: { color: '#92400E', fontSize: 12, fontWeight: '600', marginLeft: 10, flex: 1, lineHeight: 18 },
+    summaryCard: {
+        backgroundColor: '#F9FAFB',
+        padding: 16,
+        borderRadius: 16,
+        marginTop: 16,
+    },
+    summaryLabel: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+    summaryKey: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+    summaryVal: { fontSize: 13, color: '#111827', fontWeight: '700' },
+    footer: { marginTop: 10 },
+    actionButton: {
+        height: 56,
+        borderRadius: 16,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    actionButtonText: { color: '#fff', fontSize: 16, fontWeight: '800', marginRight: 4 },
 });
 
 export default SellerRegistrationScreen;
+

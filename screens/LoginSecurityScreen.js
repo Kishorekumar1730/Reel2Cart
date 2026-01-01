@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Modal, Alert, Switch, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Modal, Alert, Switch, ActivityIndicator, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,9 +34,7 @@ const LoginSecurityScreen = ({ navigation }) => {
                 setName(u.name || '');
                 setMobile(u.mobileNo || '');
                 setEmail(u.email || '');
-                // Simulated 2FA state from local storage preference for now
-                const twoFactorPref = await AsyncStorage.getItem(`2fa_${u._id}`);
-                setTwoFactor(twoFactorPref === 'true');
+                setTwoFactor(u.twoFactorEnabled || false);
             }
         } catch (e) {
             console.error(e);
@@ -55,41 +53,57 @@ const LoginSecurityScreen = ({ navigation }) => {
                 body: JSON.stringify({
                     name,
                     mobileNo: mobile,
-                    // Email update might require re-verification logic, skipping for safety or allow if backend permits
-                    // Backend allows it.
                 })
             });
             const data = await response.json();
             if (response.ok) {
                 await AsyncStorage.setItem('userInfo', JSON.stringify(data.user));
                 setUser(data.user);
-                Alert.alert("Success", "Profile updated successfully");
+                Alert.alert(t('success'), t('profileUpdated'));
             } else {
-                Alert.alert("Error", data.message || "Failed to update profile");
+                Alert.alert(t('error'), data.message || t('failedUpdateProfile'));
             }
         } catch (error) {
-            Alert.alert("Error", "Network error");
+            Alert.alert(t('error'), t('networkError'));
         } finally {
             setSaving(false);
         }
     };
 
     const toggleTwoFactor = async (val) => {
-        setTwoFactor(val);
-        if (user) {
-            await AsyncStorage.setItem(`2fa_${user._id}`, val.toString());
-            // In a real app, this would call an API to enable server-side 2FA checks
+        if (!user) return;
+        setSaving(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/user/${user._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    twoFactorEnabled: val
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setTwoFactor(val);
+                await AsyncStorage.setItem('userInfo', JSON.stringify(data.user));
+                setUser(data.user);
+            } else {
+                Alert.alert(t('error'), data.message || t('failedToggleSecurity'));
+            }
+        } catch (e) {
+            Alert.alert(t('error'), t('networkError'));
+        } finally {
+            setSaving(false);
         }
     };
 
     const handleDeleteAccount = () => {
         Alert.alert(
-            "Delete Account",
-            "Are you sure you want to delete your Reel2Cart account? This action is permanent and cannot be undone. All your data, orders, and history will be lost.",
+            t('deleteAccount'),
+            t('deleteAccountConfirm'),
             [
-                { text: "Cancel", style: "cancel" },
+                { text: t('cancel'), style: "cancel" },
                 {
-                    text: "Delete Permanent",
+                    text: t('deletePerm'),
                     style: "destructive",
                     onPress: confirmDelete
                 }
@@ -107,239 +121,297 @@ const LoginSecurityScreen = ({ navigation }) => {
 
             if (response.ok) {
                 await AsyncStorage.clear();
-                Alert.alert("Account Deleted", "We are sorry to see you go.", [
-                    { text: "OK", onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Open' }] }) }
+                Alert.alert(t('accountDeleted'), t('sorryToSeeYouGo'), [
+                    { text: t('ok'), onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Open' }] }) }
                 ]);
             } else {
                 const data = await response.json();
-                Alert.alert("Error", data.message || "Could not delete account");
+                Alert.alert(t('error'), data.message || t('failedDeleteAccount') || "Could not delete account");
                 setLoading(false);
             }
         } catch (error) {
             console.error(error);
-            Alert.alert("Error", "Something went wrong");
+            Alert.alert(t('error'), t('somethingWentWrong') || "Something went wrong");
             setLoading(false);
         }
     };
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.container}>
-                <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 50 }} />
-            </SafeAreaView>
+            <LinearGradient colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']} style={styles.container}>
+                <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                    <ActivityIndicator size="large" color="#E50914" />
+                </SafeAreaView>
+            </LinearGradient>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Login & Security</Text>
-                <View style={{ width: 40 }} />
-            </View>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Profile Information</Text>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Name</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={name}
-                            onChangeText={setName}
-                        />
-                        <AnimatedButton style={styles.editBtn} onPress={handleUpdate}>
-                            <Text style={styles.editBtnText}>Edit</Text>
-                        </AnimatedButton>
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Mobile Number</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={mobile}
-                            onChangeText={setMobile}
-                            keyboardType="phone-pad"
-                            placeholder="+91"
-                        />
-                        <AnimatedButton style={styles.editBtn} onPress={handleUpdate}>
-                            <Text style={styles.editBtnText}>Edit</Text>
-                        </AnimatedButton>
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Email</Text>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: '#f0f0f0', color: '#888' }]}
-                            value={email}
-                            editable={false}
-                        />
-                        {/* Email usually locked or requires specific flow */}
-                    </View>
-                </View>
-
-                {/* Save Changes Button Area */}
-                <AnimatedButton
-                    style={[styles.saveButton, saving && { opacity: 0.7 }]}
-                    onPress={handleUpdate}
-                    disabled={saving}
-                >
-                    {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
-                </AnimatedButton>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Security Settings</Text>
-
-                    <View style={styles.rowItem}>
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.rowTitle}>Two-Step Verification</Text>
-                            <Text style={styles.rowSubtitle}>Require an OTP for every new login.</Text>
-                        </View>
-                        <Switch
-                            trackColor={{ false: "#767577", true: "#E50914" }}
-                            thumbColor={twoFactor ? "#fff" : "#f4f3f4"}
-                            onValueChange={toggleTwoFactor}
-                            value={twoFactor}
-                        />
-                    </View>
-                </View>
-
-                <View style={[styles.section, { marginTop: 20, borderColor: '#ffcccb', borderWidth: 1 }]}>
-                    <Text style={[styles.sectionTitle, { color: '#D32F2F' }]}>Danger Zone</Text>
-                    <Text style={styles.warningText}>
-                        Deleting your account will permanently remove all your data, including order history and wishlist.
-                    </Text>
-                    <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
-                        <Text style={styles.deleteButtonText}>Delete Account</Text>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <Ionicons name="chevron-back" size={normalize(26)} color="#333" />
                     </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{t('loginSecurity')}</Text>
+                    <View style={{ width: 30 }} />
                 </View>
 
-            </ScrollView>
-        </SafeAreaView>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+                    {/* Profile Section */}
+                    <View style={styles.glassCard}>
+                        <Text style={styles.sectionTitle}>{t('profileInfo')}</Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>{t('fullName')}</Text>
+                            <View style={styles.inputWrapper}>
+                                <Ionicons name="person-outline" size={normalize(18)} color="#666" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    value={name}
+                                    onChangeText={setName}
+                                    placeholder={t('enterName') || "Enter your name"}
+                                    placeholderTextColor="#999"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>{t('mobileNumber')}</Text>
+                            <View style={styles.inputWrapper}>
+                                <Ionicons name="call-outline" size={normalize(18)} color="#666" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    value={mobile}
+                                    onChangeText={setMobile}
+                                    keyboardType="phone-pad"
+                                    placeholder="+91"
+                                    placeholderTextColor="#999"
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>{t('emailAddress')}</Text>
+                            <View style={[styles.inputWrapper, { backgroundColor: 'rgba(0,0,0,0.03)' }]}>
+                                <Ionicons name="mail-outline" size={normalize(18)} color="#999" style={styles.inputIcon} />
+                                <TextInput
+                                    style={[styles.input, { color: '#888' }]}
+                                    value={email}
+                                    editable={false}
+                                />
+                                <Ionicons name="lock-closed-outline" size={normalize(16)} color="#999" style={{ marginRight: 10 }} />
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.saveBtn}
+                            onPress={handleUpdate}
+                            disabled={saving}
+                        >
+                            <LinearGradient
+                                colors={['#E50914', '#B20710']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.saveBtnGradient}
+                            >
+                                {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>{t('saveChanges') || 'Save Changes'}</Text>}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Security Settings */}
+                    <View style={styles.glassCard}>
+                        <Text style={styles.sectionTitle}>{t('securitySettings')}</Text>
+
+                        <View style={styles.rowItem}>
+                            <View style={{ flex: 1, marginRight: wp(4) }}>
+                                <Text style={styles.rowTitle}>{t('twoFactorAuth')}</Text>
+                                <Text style={styles.rowSubtitle}>{t('twoFactorDesc')}</Text>
+                            </View>
+                            <Switch
+                                trackColor={{ false: "#ccc", true: "#E50914" }}
+                                thumbColor={"#fff"}
+                                onValueChange={toggleTwoFactor}
+                                value={twoFactor}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Danger Zone */}
+                    <View style={[styles.glassCard, styles.dangerCard]}>
+                        <View style={styles.dangerHeader}>
+                            <Ionicons name="warning-outline" size={normalize(20)} color="#D32F2F" />
+                            <Text style={[styles.sectionTitle, { color: '#D32F2F', marginBottom: 0, marginLeft: 8 }]}>{t('dangerZone')}</Text>
+                        </View>
+
+                        <Text style={styles.warningText}>
+                            {t('deleteWarning')}
+                        </Text>
+                        <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+                            <Text style={styles.deleteButtonText}>{t('deletePerm')}</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={{ height: hp(5) }} />
+
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+    },
+    gradientContainer: {
+        flex: 1,
+    },
+    safeArea: {
+        flex: 1,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
     },
     headerTitle: {
-        fontSize: normalize(18),
-        fontWeight: 'bold',
-        color: '#333',
+        fontSize: normalize(20),
+        fontWeight: '700',
+        color: '#1a1a1a',
     },
     backBtn: {
         padding: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderRadius: 12,
     },
     scrollContent: {
-        padding: 20,
+        paddingHorizontal: wp(6),
+        paddingTop: hp(2),
+        paddingBottom: hp(10),
     },
-    section: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 15,
-        marginBottom: 20,
+    glassCard: {
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderRadius: 20,
+        padding: wp(5),
+        marginBottom: hp(3),
+        borderWidth: 1,
+        borderColor: '#fff',
+        shadowColor: "#E8DFF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
         elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
     },
     sectionTitle: {
         fontSize: normalize(16),
         fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
+        color: '#1a1a1a',
+        marginBottom: hp(2.5),
     },
     inputGroup: {
-        marginBottom: 15,
-        position: 'relative'
+        marginBottom: hp(2.5),
     },
     label: {
         fontSize: normalize(13),
-        color: '#666',
-        marginBottom: 5,
+        color: '#555',
+        marginBottom: 8,
+        fontWeight: '600',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+        paddingHorizontal: 12,
+        height: hp(6),
+    },
+    inputIcon: {
+        marginRight: 10,
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
+        flex: 1,
         fontSize: normalize(15),
         color: '#333',
-        backgroundColor: '#fff'
+        height: '100%',
     },
-    editBtn: {
-        position: 'absolute',
-        right: 10,
-        bottom: 12,
-        paddingHorizontal: 10,
+    saveBtn: {
+        marginTop: hp(1),
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: "#E50914",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    editBtnText: {
-        color: '#E50914',
-        fontWeight: '600',
-        fontSize: normalize(13)
-    },
-    saveButton: {
-        backgroundColor: '#000',
-        paddingVertical: 15,
-        borderRadius: 8,
+    saveBtnGradient: {
+        paddingVertical: hp(1.8),
         alignItems: 'center',
-        marginBottom: 20,
+        justifyContent: 'center',
     },
-    saveButtonText: {
+    saveBtnText: {
         color: '#fff',
-        fontSize: normalize(16),
+        fontSize: normalize(15),
         fontWeight: 'bold',
     },
     rowItem: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
     },
     rowTitle: {
         fontSize: normalize(15),
         fontWeight: '600',
         color: '#333',
+        marginBottom: 4,
     },
     rowSubtitle: {
-        fontSize: normalize(12),
-        color: '#888',
-        marginTop: 2,
+        fontSize: normalize(13),
+        color: '#777',
+        lineHeight: normalize(18),
+    },
+    dangerCard: {
+        borderColor: 'rgba(229, 9, 20, 0.1)',
+        backgroundColor: 'rgba(255, 240, 240, 0.4)',
+    },
+    dangerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: hp(2),
     },
     warningText: {
         fontSize: normalize(13),
         color: '#555',
-        marginBottom: 15,
-        lineHeight: 20,
+        lineHeight: normalize(20),
+        marginBottom: hp(2.5),
     },
     deleteButton: {
         backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#D32F2F',
-        paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 12,
+        paddingVertical: hp(1.5),
         alignItems: 'center',
     },
     deleteButtonText: {
         color: '#D32F2F',
-        fontWeight: 'bold',
         fontSize: normalize(14),
+        fontWeight: '700',
     }
 });
 

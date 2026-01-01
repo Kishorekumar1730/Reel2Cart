@@ -98,121 +98,151 @@ const FavouriteScreen = () => {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#E50914" />
-            {/* Header */}
-            <LinearGradient colors={["#E50914", "#B20710"]} style={styles.header}>
-                <View style={styles.headerContent}>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={{ flex: 1 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+                {/* Header */}
+                <View style={styles.header}>
                     <Text style={styles.headerTitle}>{t('favouriteTab') || "My Wishlist"}</Text>
-                    <Ionicons name="heart" size={28} color="#fff" />
+                    <View style={styles.headerBadge}>
+                        <Text style={styles.headerBadgeText}>{wishlist.length} {t('items')}</Text>
+                    </View>
                 </View>
-            </LinearGradient>
 
-            {loading && wishlist.length === 0 ? (
-                <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#E50914" />
-                </View>
-            ) : wishlist.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Ionicons name="heart-dislike-outline" size={80} color="#ccc" />
-                    <Text style={styles.emptyText}>No favorites yet!</Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={wishlist}
-                    renderItem={renderItem}
-                    keyExtractor={item => item._id || item.productId}
-                    numColumns={2}
-                    contentContainerStyle={styles.listContent}
-                    columnWrapperStyle={styles.columnWrapper}
-                />
-            )}
-        </SafeAreaView>
+                {loading && wishlist.length === 0 ? (
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color="#E50914" />
+                    </View>
+                ) : wishlist.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="heart-dislike-outline" size={80} color="#777" />
+                        <Text style={styles.emptyText}>{t('noFavorites')}</Text>
+                        <Text style={styles.emptySubText}>{t('saveLoveItems')}</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={wishlist}
+                        renderItem={renderItem}
+                        keyExtractor={item => item._id || item.productId}
+                        numColumns={2}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.listContent}
+                        columnWrapperStyle={styles.columnWrapper}
+                    />
+                )}
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: 'transparent',
     },
     header: {
         paddingVertical: 15,
-        paddingHorizontal: 15,
-        elevation: 4,
-    },
-    headerContent: {
+        paddingHorizontal: 20,
+        backgroundColor: 'rgba(255,255,255,0.5)',
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#fff",
+        fontSize: normalize(20),
+        fontWeight: "800",
+        color: "#111",
+        letterSpacing: 0.5,
+    },
+    headerBadge: {
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+    },
+    headerBadgeText: {
+        fontSize: normalize(12),
+        fontWeight: '600',
+        color: '#555',
     },
     listContent: {
-        padding: 10,
+        padding: 15,
+        paddingBottom: 100,
     },
     columnWrapper: {
         justifyContent: 'space-between',
     },
     card: {
         backgroundColor: '#fff',
-        width: wp(46),
-        borderRadius: 8,
+        width: wp(44),
+        borderRadius: 16,
         marginBottom: 15,
-        elevation: 2,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
         overflow: 'hidden',
     },
     imageContainer: {
         width: '100%',
-        height: wp(40),
+        height: wp(44),
         position: 'relative',
-        padding: 10,
+        backgroundColor: '#f9f9f9',
         justifyContent: 'center',
         alignItems: 'center',
     },
     image: {
-        width: '100%',
-        height: '100%',
+        width: '80%',
+        height: '80%',
+        resizeMode: 'contain',
     },
     removeBtn: {
         position: 'absolute',
-        top: 5,
-        right: 5,
+        top: 10,
+        right: 10,
         backgroundColor: '#fff',
-        borderRadius: 15,
-        padding: 5,
-        elevation: 2,
+        borderRadius: 20,
+        padding: 6,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     details: {
-        padding: 10,
+        padding: 12,
     },
     name: {
         fontSize: normalize(13),
-        color: '#333',
-        marginBottom: 5,
-        height: 35,
+        fontWeight: '600',
+        color: '#111',
+        marginBottom: 4,
+        height: 36,
     },
     price: {
         fontSize: normalize(15),
-        fontWeight: 'bold',
-        color: '#000',
-        marginBottom: 8,
+        fontWeight: '800',
+        color: '#111',
+        marginBottom: 10,
     },
     cartBtn: {
-        backgroundColor: '#FFD814',
-        paddingVertical: 8,
-        borderRadius: 4,
+        backgroundColor: '#111',
+        paddingVertical: 10,
+        borderRadius: 20,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#FCD200'
     },
     cartBtnText: {
         fontSize: normalize(12),
-        color: '#000',
-        fontWeight: '500',
+        color: '#fff',
+        fontWeight: '700',
     },
     center: {
         flex: 1,
@@ -223,11 +253,19 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 40,
     },
     emptyText: {
         marginTop: 20,
-        fontSize: 18,
-        color: '#555',
+        fontSize: normalize(20),
+        fontWeight: 'bold',
+        color: '#444',
+    },
+    emptySubText: {
+        marginTop: 10,
+        fontSize: normalize(14),
+        color: '#666',
+        textAlign: 'center',
     },
 });
 

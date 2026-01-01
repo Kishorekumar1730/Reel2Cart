@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { wp, hp, normalize } from '../utils/responsive';
 
 const FollowListScreen = () => {
     const navigation = useNavigation();
@@ -70,10 +72,6 @@ const FollowListScreen = () => {
         } else if (type === 'seller_followers') {
             // Seller Removes Follower
             // item is a User
-            // currentUserId is the Seller's User ID (Owner), but we need the Seller ID to hit the endpoint.
-            // The endpoint expects /seller/follow/:sellerId with body { userId: followerId }
-            // Therefore, for this screen we must pass the Seller ID as 'id' param.
-
             try {
                 setData(prev => prev.filter(p => p._id !== item._id));
 
@@ -90,37 +88,42 @@ const FollowListScreen = () => {
     };
 
     const renderItem = ({ item }) => {
-        // Determine logic based on type
-        // User Following -> Shows Sellers
-        // Seller Followers -> Shows Users
-        // Seller Following -> Shows Users/Sellers
-
         const image = item.profileImage;
-        // Prioritize 'name' if it exists (User), else businessName (Seller)
-        const name = item.name || item.businessName || "Unknown User";
-        const subtext = item.businessName ? 'Seller' : 'User';
+        const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+        // Robust Name Logic
+        let displayName = "Unknown User";
+        if (item.businessName) displayName = item.businessName;
+        else if (item.name) displayName = item.name;
+
+        // Handle Logic
+        let handle = "";
+        if (item.sellerName) handle = "@" + item.sellerName;
+        else if (item.email) handle = item.email.split('@')[0]; // Simple mask
+        else handle = item.businessName ? "Seller" : "User";
 
         return (
-            <View style={styles.itemContainer}>
+            <View style={styles.card}>
                 <TouchableOpacity
                     style={styles.profileRow}
+                    activeOpacity={0.7}
                     onPress={() => {
                         if (item.businessName) {
-                            // It's a seller, go to profile
                             navigation.navigate("SellerProfile", { sellerId: item._id });
                         }
                     }}
                 >
-                    <Image
-                        source={{ uri: image || 'https://via.placeholder.com/50' }}
-                        style={styles.avatar}
-                    />
+                    <View style={styles.avatarContainer}>
+                        <Image
+                            source={{ uri: (image && image !== '') ? image : defaultAvatar }}
+                            style={styles.avatar}
+                        />
+                    </View>
                     <View style={styles.info}>
-                        <Text style={styles.name}>{name}</Text>
-                        <Text style={styles.subtext}>{subtext}</Text>
+                        <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+                        <Text style={styles.subtext} numberOfLines={1}>{handle}</Text>
                     </View>
                 </TouchableOpacity>
-
 
                 {type === 'user_following' && (
                     <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item)}>
@@ -137,103 +140,163 @@ const FollowListScreen = () => {
         );
     };
 
-    if (loading) {
-        return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#E50914" />
-            </View>
-        );
-    }
-
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.title}>{title}</Text>
-                <View style={{ width: 24 }} />
-            </View>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            <FlatList
-                data={data}
-                keyExtractor={(item) => item._id}
-                renderItem={renderItem}
-                ListEmptyComponent={
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{title}</Text>
+                    <View style={{ width: 24 }} />
+                </View>
+
+                {loading ? (
                     <View style={styles.centered}>
-                        <Text style={{ color: '#666', marginTop: 50 }}>List is empty</Text>
+                        <ActivityIndicator size="large" color="#E50914" />
                     </View>
-                }
-            />
-        </SafeAreaView>
+                ) : (
+                    <FlatList
+                        data={data}
+                        keyExtractor={(item) => item._id}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        ListEmptyComponent={
+                            <View style={styles.centered}>
+                                <Ionicons name="people-outline" size={normalize(50)} color="#ccc" />
+                                <Text style={styles.emptyText}>No users found.</Text>
+                            </View>
+                        }
+                    />
+                )}
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 export default FollowListScreen;
 
 const styles = StyleSheet.create({
+    gradientContainer: {
+        flex: 1,
+    },
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 15,
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(1.5),
+        backgroundColor: 'rgba(255,255,255,0.6)',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: 'rgba(255,255,255,0.4)',
+        zIndex: 10,
     },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
+    backButton: {
+        padding: 8,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderRadius: 12,
+    },
+    headerTitle: {
+        fontSize: normalize(18),
+        fontWeight: '700',
+        color: '#1F2937',
+    },
+    listContent: {
+        padding: wp(4),
+        paddingBottom: hp(5),
     },
     centered: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        minHeight: hp(50),
     },
-    itemContainer: {
+    emptyText: {
+        color: '#64748B',
+        marginTop: hp(2),
+        fontSize: normalize(15),
+        fontWeight: '500',
+    },
+    card: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f5f5f5',
+        backgroundColor: 'rgba(255,255,255,0.75)',
+        marginBottom: hp(1.5),
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#fff',
+        // Slight shadow
+        shadowColor: "#64748B",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        elevation: 2,
     },
     profileRow: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
     },
+    avatarContainer: {
+        // Instagram-like ring effect
+        width: 58,
+        height: 58,
+        borderRadius: 29,
+        padding: 2, // Space for border
+        backgroundColor: '#fff',
+        borderWidth: 2,
+        borderColor: '#DDD6FE', // Light purple ring
+        marginRight: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     avatar: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#eee',
-        marginRight: 15,
+        backgroundColor: '#F3F4F6',
     },
     info: {
         justifyContent: 'center',
+        flex: 1,
     },
     name: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: normalize(15),
+        fontWeight: '700',
+        color: '#1E293B',
+        marginBottom: 2,
     },
     subtext: {
-        fontSize: 12,
-        color: '#888',
+        fontSize: normalize(12),
+        color: '#64748B',
+        fontWeight: '500'
     },
     actionBtn: {
-        paddingHorizontal: 15,
+        paddingHorizontal: 14,
         paddingVertical: 8,
-        backgroundColor: '#eee',
-        borderRadius: 5,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        marginLeft: 8,
     },
     actionText: {
-        fontSize: 12,
+        fontSize: normalize(12),
         fontWeight: '600',
-        color: '#333',
+        color: '#EF4444',
     }
 });

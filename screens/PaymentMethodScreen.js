@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, Pressable, Alert, ActivityIndicator } from "react-native";
+import { StyleSheet, Text, View, Pressable, Alert, ActivityIndicator, TouchableOpacity, ScrollView, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -12,7 +12,7 @@ const PaymentMethodScreen = () => {
     const navigation = useNavigation();
     const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
-    const [selectedMethod, setSelectedMethod] = useState("cod"); // Default fallack
+    const [selectedMethod, setSelectedMethod] = useState("cod"); // Default fallback
 
     useEffect(() => {
         loadDefaultMethod();
@@ -33,169 +33,245 @@ const PaymentMethodScreen = () => {
         setLoading(true);
         try {
             await AsyncStorage.setItem("defaultPaymentMethod", selectedMethod);
-            Alert.alert(t('save'), "Default payment method updated successfully!");
+            Alert.alert(t('save'), t('defaultPaymentUpdated'));
         } catch (error) {
             console.log("Error saving method", error);
-            Alert.alert("Error", "Failed to save default payment method.");
+            Alert.alert(t('error'), t('failedToSavePayment'));
         } finally {
             setLoading(false);
         }
     };
 
-    const PaymentOption = ({ id, icon, label, subIcon }) => (
-        <Pressable
+    const PaymentOption = ({ id, icon, label, subLabel }) => (
+        <TouchableOpacity
             style={[
-                styles.optionCard,
+                styles.glassCard,
                 selectedMethod === id && styles.selectedCard,
             ]}
             onPress={() => setSelectedMethod(id)}
+            activeOpacity={0.8}
         >
-            <View style={styles.row}>
-                <View style={styles.iconContainer}>
+            <View style={styles.cardContent}>
+                <View style={[styles.iconBox, selectedMethod === id && styles.selectedIconBox]}>
                     {icon}
                 </View>
-                <Text style={[styles.optionLabel, selectedMethod === id && styles.selectedText]}>
-                    {label}
-                </Text>
-            </View>
-
-            <View style={styles.row}>
-                {subIcon && <View style={{ marginRight: 10 }}>{subIcon}</View>}
-                <View style={styles.radioOuter}>
-                    {selectedMethod === id && <View style={styles.radioInner} />}
+                <View style={styles.textContainer}>
+                    <Text style={[styles.optionLabel, selectedMethod === id && styles.selectedText]}>
+                        {label}
+                    </Text>
+                    {subLabel && <Text style={styles.subLabel}>{subLabel}</Text>}
+                </View>
+                <View style={styles.radioContainer}>
+                    <View style={[styles.radioOuter, selectedMethod === id && styles.selectedRadioOuter]}>
+                        {selectedMethod === id && <View style={styles.radioInner} />}
+                    </View>
                 </View>
             </View>
-        </Pressable>
+        </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <LinearGradient colors={["#E50914", "#B20710"]} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </Pressable>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={normalize(26)} color="#333" />
+                    </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('paymentMethod')}</Text>
-                    <View style={{ width: 24 }} />
+                    <View style={{ width: wp(10) }} />
                 </View>
-            </LinearGradient>
 
-            <View style={styles.content}>
-                <Text style={styles.subTitle}>Select Default Payment Method</Text>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <Text style={styles.sectionTitle}>{t('selectDefaultMethod')}</Text>
+                    <Text style={styles.sectionSubtitle}>{t('chooseDefaultPay')}</Text>
 
-                <PaymentOption
-                    id="wallet"
-                    label={t('shopflixBalance')}
-                    icon={<Ionicons name="wallet-outline" size={24} color="#333" />}
-                />
+                    <PaymentOption
+                        id="wallet"
+                        label={t('shopflixBalance')}
+                        subLabel={t('payWithBalance')}
+                        icon={<Ionicons name="wallet-outline" size={normalize(24)} color={selectedMethod === 'wallet' ? '#E50914' : '#555'} />}
+                    />
 
-                <PaymentOption
-                    id="upi"
-                    label={t('upi')}
-                    icon={<Ionicons name="qr-code-outline" size={24} color="#333" />}
-                />
+                    <PaymentOption
+                        id="upi"
+                        label={t('upi')}
+                        subLabel={t('upiSub')}
+                        icon={<Ionicons name="qr-code-outline" size={normalize(24)} color={selectedMethod === 'upi' ? '#E50914' : '#555'} />}
+                    />
 
-                <PaymentOption
-                    id="cod"
-                    label={t('cashOnDelivery')}
-                    icon={<Ionicons name="cash-outline" size={24} color="#333" />}
-                />
+                    <PaymentOption
+                        id="card"
+                        label={t('creditDebitCard')}
+                        subLabel={t('cardSub')}
+                        icon={<Ionicons name="card-outline" size={normalize(24)} color={selectedMethod === 'card' ? '#E50914' : '#555'} />}
+                    />
 
-                <Pressable onPress={handleSave} style={styles.saveBtn} disabled={loading}>
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{t('save')}</Text>}
-                </Pressable>
-            </View>
-        </SafeAreaView>
+                    <PaymentOption
+                        id="cod"
+                        label={t('cashOnDelivery')}
+                        subLabel={t('payDoorstep')}
+                        icon={<Ionicons name="cash-outline" size={normalize(24)} color={selectedMethod === 'cod' ? '#E50914' : '#555'} />}
+                    />
+
+                    <TouchableOpacity onPress={handleSave} style={styles.saveBtn} disabled={loading}>
+                        <LinearGradient
+                            colors={['#E50914', '#B81C26']}
+                            style={styles.saveBtnGradient}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.saveBtnText}>{t('save')}</Text>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 export default PaymentMethodScreen;
 
 const styles = StyleSheet.create({
-    container: {
+    gradientContainer: {
         flex: 1,
-        backgroundColor: "#f8f8f8",
+    },
+    safeArea: {
+        flex: 1,
     },
     header: {
-        paddingVertical: 15,
-        paddingHorizontal: 15,
-        elevation: 4,
-    },
-    headerContent: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: normalize(20),
+        fontWeight: "700",
+        color: "#1a1a1a",
+    },
+    backButton: {
+        padding: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderRadius: 12,
+    },
+    scrollContent: {
+        paddingHorizontal: wp(5),
+        paddingBottom: hp(5),
+    },
+    sectionTitle: {
+        fontSize: normalize(18),
         fontWeight: "bold",
-        color: "#fff",
+        color: "#333",
+        marginTop: hp(2),
+        marginBottom: hp(0.5),
     },
-    content: {
-        padding: 20,
+    sectionSubtitle: {
+        fontSize: normalize(14),
+        color: "#666",
+        marginBottom: hp(3),
     },
-    subTitle: {
-        fontSize: 16,
-        color: "#555",
-        marginBottom: 20,
-        fontWeight: "500",
-    },
-    optionCard: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#fff",
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 15,
+    glassCard: {
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderRadius: 16,
+        marginBottom: hp(2),
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: '#fff',
+        shadowColor: "#E8DFF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 2,
+        overflow: 'hidden',
     },
     selectedCard: {
-        borderColor: "#E50914",
-        backgroundColor: "#fff0f0",
+        borderColor: '#E50914',
+        backgroundColor: 'rgba(255,255,255,0.85)',
     },
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
+    cardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: wp(4),
     },
-    iconContainer: {
-        marginRight: 15,
+    iconBox: {
+        width: wp(12),
+        height: wp(12),
+        borderRadius: wp(6),
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: wp(4),
+    },
+    selectedIconBox: {
+        backgroundColor: '#FFF0F0',
+    },
+    textContainer: {
+        flex: 1,
     },
     optionLabel: {
-        fontSize: 16,
+        fontSize: normalize(16),
+        fontWeight: "600",
         color: "#333",
+        marginBottom: 2,
     },
     selectedText: {
         color: "#E50914",
-        fontWeight: "bold",
+        fontWeight: "700",
+    },
+    subLabel: {
+        fontSize: normalize(12),
+        color: "#888",
+    },
+    radioContainer: {
+        marginLeft: 10,
     },
     radioOuter: {
-        height: 20,
-        width: 20,
-        borderRadius: 10,
+        height: 22,
+        width: 22,
+        borderRadius: 11,
         borderWidth: 2,
-        borderColor: "#777",
+        borderColor: "#aaa",
         alignItems: "center",
         justifyContent: "center",
     },
+    selectedRadioOuter: {
+        borderColor: "#E50914",
+    },
     radioInner: {
-        height: 10,
-        width: 10,
-        borderRadius: 5,
+        height: 12,
+        width: 12,
+        borderRadius: 6,
         backgroundColor: "#E50914",
     },
     saveBtn: {
-        backgroundColor: '#E50914',
-        padding: 15,
-        borderRadius: 8,
+        marginTop: hp(4),
+        borderRadius: 25,
+        overflow: 'hidden',
+        shadowColor: "#E50914",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    saveBtnGradient: {
+        paddingVertical: hp(2),
         alignItems: 'center',
-        marginTop: 20,
+        justifyContent: 'center',
     },
     saveBtnText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: normalize(16),
         fontWeight: 'bold',
-    }
+    },
 });

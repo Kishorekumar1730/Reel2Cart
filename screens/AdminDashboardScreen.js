@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator, TextInput, RefreshControl, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../config/apiConfig';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker'; // Added import
+import * as ImagePicker from 'expo-image-picker';
+import { wp, hp, normalize } from '../utils/responsive';
 
 const AdminDashboardScreen = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -141,8 +142,8 @@ const AdminDashboardScreen = ({ navigation }) => {
 
     const StatCard = ({ title, value, icon, color }) => (
         <View style={styles.statCard}>
-            <View style={[styles.iconBox, { backgroundColor: color + '20' }]}>
-                <Ionicons name={icon} size={24} color={color} />
+            <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
+                <Ionicons name={icon} size={normalize(22)} color={color} />
             </View>
             <View>
                 <Text style={styles.statValue}>{value}</Text>
@@ -161,7 +162,7 @@ const AdminDashboardScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.pendingAlert}>
-                <Feather name="alert-circle" size={24} color="#D32F2F" />
+                <Feather name="alert-circle" size={normalize(24)} color="#D32F2F" />
                 <Text style={styles.pendingText}>
                     You have {stats.pendingSellers || 0} pending seller verifications.
                 </Text>
@@ -184,16 +185,16 @@ const AdminDashboardScreen = ({ navigation }) => {
                             <Text style={styles.cardSub}>{seller.sellerName}</Text>
                         </View>
                         <View style={styles.cardBody}>
-                            <Text>GSTIN: {seller.gstin || 'N/A'}</Text>
-                            <Text>Type: {seller.accountType}</Text>
-                            {seller.isVerified ? null : <Text style={{ color: 'orange', fontWeight: 'bold' }}>Status: Pending</Text>}
+                            <Text style={styles.cardText}>GSTIN: {seller.gstin || 'N/A'}</Text>
+                            <Text style={styles.cardText}>Type: {seller.accountType}</Text>
+                            {seller.isVerified ? null : <Text style={styles.statusPending}>Status: Pending</Text>}
                         </View>
                         <View style={styles.cardActions}>
-                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#D32F2F' }]} onPress={() => handleVerifySeller(seller._id, 'reject')}>
-                                <Text style={styles.btnText}>Reject</Text>
+                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#FFEBEE' }]} onPress={() => handleVerifySeller(seller._id, 'reject')}>
+                                <Text style={[styles.btnText, { color: '#D32F2F' }]}>Reject</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#4CAF50' }]} onPress={() => handleVerifySeller(seller._id, 'approve')}>
-                                <Text style={styles.btnText}>Approve</Text>
+                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#E8F5E9' }]} onPress={() => handleVerifySeller(seller._id, 'approve')}>
+                                <Text style={[styles.btnText, { color: '#388E3C' }]}>Approve</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -205,7 +206,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     const renderOffers = () => (
         <View style={styles.section}>
             <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddOffer(!showAddOffer)}>
-                <Ionicons name={showAddOffer ? "close" : "add"} size={24} color="#fff" />
+                <Ionicons name={showAddOffer ? "close" : "add"} size={normalize(22)} color="#fff" />
                 <Text style={styles.addBtnText}>{showAddOffer ? "Cancel" : "Add New Offer"}</Text>
             </TouchableOpacity>
 
@@ -218,7 +219,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                             <Image source={{ uri: newOffer.imageUrl }} style={styles.uploadedImage} />
                         ) : (
                             <View style={styles.uploadPlaceholder}>
-                                <Ionicons name="image-outline" size={30} color="#666" />
+                                <Ionicons name="image-outline" size={normalize(30)} color="#888" />
                                 <Text style={styles.uploadText}>Select Offer Banner</Text>
                             </View>
                         )}
@@ -244,8 +245,8 @@ const AdminDashboardScreen = ({ navigation }) => {
                         <Text style={styles.offerCode}>Code: {offer.couponCode || 'None'}</Text>
                         <Text style={styles.offerDisc}>{offer.discountPercentage}% OFF</Text>
                     </View>
-                    <TouchableOpacity onPress={() => handleDeleteOffer(offer._id)}>
-                        <Ionicons name="trash-outline" size={24} color="#D32F2F" />
+                    <TouchableOpacity style={styles.deleteIcon} onPress={() => handleDeleteOffer(offer._id)}>
+                        <Ionicons name="trash-outline" size={normalize(20)} color="#fff" />
                     </TouchableOpacity>
                 </View>
             ))}
@@ -253,107 +254,369 @@ const AdminDashboardScreen = ({ navigation }) => {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <LinearGradient colors={['#1a237e', '#283593']} style={styles.header}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>
-                    <Text style={styles.headerTitle}>Admin Dashboard</Text>
-                </View>
-            </LinearGradient>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.container}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            <View style={styles.tabs}>
-                {['Overview', 'Verifications', 'Offers'].map(tab => (
-                    <TouchableOpacity
-                        key={tab}
-                        style={[styles.tab, activeTab === tab && styles.activeTab]}
-                        onPress={() => setActiveTab(tab)}
-                    >
-                        <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
                     </TouchableOpacity>
-                ))}
-            </View>
+                    <Text style={styles.headerTitle}>Admin Dashboard</Text>
+                    <View style={{ width: normalize(24) }} />
+                </View>
 
-            <ScrollView
-                contentContainerStyle={styles.content}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                {loading ? <ActivityIndicator size="large" color="#1a237e" /> : (
-                    <>
-                        {activeTab === 'Overview' && renderOverview()}
-                        {activeTab === 'Verifications' && renderVerifications()}
-                        {activeTab === 'Offers' && renderOffers()}
-                    </>
-                )}
-            </ScrollView>
-        </SafeAreaView>
+                {/* Glassmorphic Tabs */}
+                <View style={styles.tabsContainer}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+                        {['Overview', 'Verifications', 'Offers'].map(tab => (
+                            <TouchableOpacity
+                                key={tab}
+                                style={[styles.tab, activeTab === tab && styles.activeTab]}
+                                onPress={() => setActiveTab(tab)}
+                            >
+                                <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {loading ? <ActivityIndicator size="large" color="#555" style={{ marginTop: hp(10) }} /> : (
+                        <>
+                            {activeTab === 'Overview' && renderOverview()}
+                            {activeTab === 'Verifications' && renderVerifications()}
+                            {activeTab === 'Offers' && renderOffers()}
+                        </>
+                    )}
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f5f5' },
-    header: { padding: 20, paddingTop: 10, paddingBottom: 20 },
-    headerTitle: { fontSize: 20, color: '#fff', fontWeight: 'bold', marginLeft: 15 },
-    tabs: { flexDirection: 'row', backgroundColor: '#fff', elevation: 2 },
-    tab: { flex: 1, padding: 15, alignItems: 'center' },
-    activeTab: { borderBottomWidth: 3, borderBottomColor: '#1a237e' },
-    tabText: { color: '#666', fontWeight: '600' },
-    activeTabText: { color: '#1a237e' },
-    content: { padding: 15 },
-    section: { marginBottom: 20 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    statCard: { width: '48%', backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 15, elevation: 2, flexDirection: 'row', alignItems: 'center' },
-    iconBox: { padding: 8, borderRadius: 8, marginRight: 10 },
-    statValue: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-    statTitle: { fontSize: 12, color: '#666' },
-    pendingAlert: { flexDirection: 'row', backgroundColor: '#FFEBEE', padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-    pendingText: { flex: 1, marginLeft: 10, color: '#D32F2F' },
-    linkText: { fontWeight: 'bold', color: '#D32F2F', textDecorationLine: 'underline' },
-    emptyText: { textAlign: 'center', color: '#999', marginTop: 20 },
-    card: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 15, elevation: 2 },
-    cardHeader: { marginBottom: 10 },
-    cardTitle: { fontSize: 16, fontWeight: 'bold' },
-    cardSub: { color: '#666' },
-    cardBody: { marginBottom: 15 },
-    cardActions: { flexDirection: 'row', justifyContent: 'flex-end' },
-    actionBtn: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 5, marginLeft: 10 },
-    btnText: { color: '#fff', fontWeight: 'bold' },
-    addBtn: { flexDirection: 'row', backgroundColor: '#1a237e', padding: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-    addBtnText: { color: '#fff', fontWeight: 'bold', marginLeft: 5 },
-    formCard: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 20, elevation: 3 },
-    formTitle: { fontWeight: 'bold', fontSize: 16, marginBottom: 15 },
-    input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, marginBottom: 10 },
-    submitBtn: { backgroundColor: '#4CAF50', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-    submitBtnText: { color: '#fff', fontWeight: 'bold' },
-    offerCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', elevation: 2 },
-    offerImg: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#eee' },
-    offerInfo: { flex: 1, marginLeft: 15 },
-    offerTitle: { fontWeight: 'bold', fontSize: 16 },
-    offerCode: { color: '#1976D2', fontWeight: '600', fontSize: 12 },
-    offerDisc: { color: '#4CAF50', fontWeight: 'bold' },
-    imagePicker: {
-        height: 150,
-        backgroundColor: '#f0f0f0',
+    container: { flex: 1 },
+    safeArea: { flex: 1 },
+    header: {
+        paddingVertical: hp(2),
+        paddingHorizontal: wp(5),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(255,255,255,0.4)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.2)',
+    },
+    backButton: {
+        padding: 4,
+    },
+    headerTitle: {
+        fontSize: normalize(20),
+        color: '#333',
+        fontWeight: '700',
+    },
+    tabsContainer: {
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        paddingVertical: hp(1),
+    },
+    tabsScroll: {
+        paddingHorizontal: wp(4),
+    },
+    tab: {
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(1),
+        borderRadius: 20,
+        marginRight: wp(2),
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    activeTab: {
+        backgroundColor: '#333',
+        borderColor: '#333',
+    },
+    tabText: {
+        color: '#555',
+        fontWeight: '600',
+        fontSize: normalize(14),
+    },
+    activeTabText: {
+        color: '#fff',
+    },
+    content: {
+        padding: wp(4),
+        paddingBottom: hp(15),
+    },
+    section: {
+        marginBottom: hp(3),
+    },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    statCard: {
+        width: '48%',
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        padding: wp(4),
+        borderRadius: 16,
+        marginBottom: hp(2),
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.5)',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconBox: {
+        padding: wp(2),
+        borderRadius: 10,
+        marginRight: wp(3),
+    },
+    statValue: {
+        fontSize: normalize(18),
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    statTitle: {
+        fontSize: normalize(12),
+        color: '#666',
+        marginTop: 2,
+    },
+    pendingAlert: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,235,238,0.9)',
+        padding: wp(4),
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: hp(1),
+        borderWidth: 1,
+        borderColor: '#FFCDD2',
+    },
+    pendingText: {
+        flex: 1,
+        marginLeft: wp(3),
+        color: '#D32F2F',
+        fontSize: normalize(14),
+    },
+    linkText: {
+        fontWeight: 'bold',
+        color: '#D32F2F',
+        textDecorationLine: 'underline',
+        fontSize: normalize(14),
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: '#666',
+        marginTop: hp(4),
+        fontSize: normalize(16),
+    },
+    card: {
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        padding: wp(4),
+        borderRadius: 16,
+        marginBottom: hp(2),
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.5)',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    cardHeader: {
+        marginBottom: hp(1.5),
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        paddingBottom: hp(1),
+    },
+    cardTitle: {
+        fontSize: normalize(16),
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    cardSub: {
+        color: '#666',
+        fontSize: normalize(13),
+        marginTop: 2,
+    },
+    cardBody: {
+        marginBottom: hp(2),
+    },
+    cardText: {
+        color: '#555',
+        fontSize: normalize(14),
+        marginBottom: 4,
+    },
+    statusPending: {
+        color: '#F57C00',
+        fontWeight: 'bold',
+        fontSize: normalize(14),
+        marginTop: 4,
+    },
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    actionBtn: {
+        paddingHorizontal: wp(4),
+        paddingVertical: hp(1),
         borderRadius: 8,
-        marginBottom: 15,
+        marginLeft: wp(3),
+    },
+    btnText: {
+        fontWeight: '600',
+        fontSize: normalize(14),
+    },
+    addBtn: {
+        flexDirection: 'row',
+        backgroundColor: '#333',
+        paddingVertical: hp(1.5),
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: hp(2.5),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    addBtnText: {
+        color: '#fff',
+        fontWeight: '600',
+        marginLeft: wp(2),
+        fontSize: normalize(16),
+    },
+    formCard: {
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        padding: wp(4),
+        borderRadius: 16,
+        marginBottom: hp(3),
+        elevation: 3,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 5,
+    },
+    formTitle: {
+        fontWeight: 'bold',
+        fontSize: normalize(16),
+        marginBottom: hp(2),
+        color: '#333',
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 10,
+        padding: wp(3.5),
+        marginBottom: hp(1.5),
+        fontSize: normalize(14),
+        backgroundColor: '#f9f9f9',
+    },
+    submitBtn: {
+        backgroundColor: '#4CAF50',
+        padding: hp(1.5),
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: hp(1),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    submitBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: normalize(16),
+    },
+    offerCard: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        borderRadius: 12,
+        padding: wp(3),
+        marginBottom: hp(1.5),
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+    },
+    offerImg: {
+        width: wp(16),
+        height: wp(16),
+        borderRadius: 8,
+        backgroundColor: '#eee',
+    },
+    offerInfo: {
+        flex: 1,
+        marginLeft: wp(4),
+    },
+    offerTitle: {
+        fontWeight: 'bold',
+        fontSize: normalize(15),
+        color: '#333',
+    },
+    offerCode: {
+        color: '#1976D2',
+        fontWeight: '500',
+        fontSize: normalize(13),
+        marginTop: 2,
+    },
+    offerDisc: {
+        color: '#4CAF50',
+        fontWeight: 'bold',
+        fontSize: normalize(13),
+        marginTop: 2,
+    },
+    imagePicker: {
+        height: hp(18),
+        backgroundColor: '#f5f5f5',
+        borderRadius: 10,
+        marginBottom: hp(2),
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#e0e0e0',
         borderStyle: 'dashed',
     },
     uploadedImage: {
         width: '100%',
         height: '100%',
-        borderRadius: 8,
+        borderRadius: 10,
     },
     uploadPlaceholder: {
         alignItems: 'center',
     },
     uploadText: {
         marginTop: 8,
-        color: '#666',
+        color: '#888',
         fontWeight: '500',
+        fontSize: normalize(14),
     },
+    deleteIcon: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#D32F2F',
+        marginLeft: 10,
+        elevation: 2,
+    }
 });
 
 export default AdminDashboardScreen;

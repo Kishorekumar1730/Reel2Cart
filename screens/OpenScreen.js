@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, StatusBar, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, StatusBar, Platform, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -11,86 +11,94 @@ const OpenScreen = () => {
   const navigation = useNavigation();
   const { language, t } = useLanguage();
 
+  const FEATURES = [
+    { id: 1, text: t('feature1'), icon: 'heart-outline', color: '#e31837' },
+    { id: 2, text: t('feature2'), icon: 'play-circle-outline', color: '#e31837' },
+    { id: 3, text: t('feature3'), icon: 'location-outline', color: '#e31837' },
+  ];
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <LinearGradient
+      colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.contentContainer}>
+          {/* Back Arrow */}
+          <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={normalize(26)} color="#333" />
+          </TouchableOpacity>
 
-      <View style={styles.contentContainer}>
-        {/* Back Arrow */}
-        <TouchableOpacity style={styles.backIcon} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={normalize(26)} color="#333" />
-        </TouchableOpacity>
+          {/* Top Section: Logo & Title */}
+          <View style={styles.topSection}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../assets/simple-logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.title}>{t('openTitle')}</Text>
+          </View>
 
-        {/* Top Section: Logo & Title */}
-        <View style={styles.topSection}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../assets/simple-logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+          {/* Middle Section: Features */}
+          <View style={styles.middleSection}>
+            {FEATURES.map(feature => (
+              <View key={feature.id} style={styles.featureItem}>
+                <Ionicons name={feature.icon} size={normalize(20)} color={feature.color} style={styles.featureIcon} />
+                <Text style={styles.featureText}>{feature.text}</Text>
+              </View>
+            ))}
           </View>
-          <Text style={styles.title}>{t('openTitle')}</Text>
-        </View>
 
-        {/* Middle Section: Features */}
-        <View style={styles.middleSection}>
-          <View style={styles.featureItem}>
-            <Ionicons name="heart-outline" size={normalize(20)} color="#e31837" style={styles.featureIcon} />
-            <Text style={styles.featureText}>{t('feature1')}</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="play-circle-outline" size={normalize(20)} color="#e31837" style={styles.featureIcon} />
-            <Text style={styles.featureText}>{t('feature2')}</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="location-outline" size={normalize(20)} color="#e31837" style={styles.featureIcon} />
-            <Text style={styles.featureText}>{t('feature3')}</Text>
-          </View>
-        </View>
-
-        {/* Bottom Section: Actions */}
-        <View style={styles.bottomSection}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={styles.actionButtonWrapper}
-            onPress={() => navigation.navigate('Login', { language })}
-          >
-            <LinearGradient
-              colors={['#007bff', '#ff0000']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientButton}
+          {/* Bottom Section: Actions */}
+          <View style={styles.bottomSection}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.actionButtonWrapper}
+              onPress={() => navigation.navigate('Login', { language })}
             >
-              <Text style={styles.primaryButtonText}>{t('signInBtn')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={['#E50914', '#B20710']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientButton}
+              >
+                <Text style={styles.primaryButtonText}>{t('signInBtn')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.secondaryButton]}
-            onPress={() => navigation.navigate('Register', { language })}
-          >
-            <Text style={styles.secondaryButtonText}>{t('createAccountBtn')}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryButton]}
+              onPress={() => navigation.navigate('Register', { language })}
+            >
+              <Text style={styles.secondaryButtonText}>{t('createAccountBtn')}</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.skipLink}
-            onPress={() => navigation.navigate('Welcome', { language })}
-          >
-            <Text style={styles.skipText}>{t('skipBtn')}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.skipLink}
+              onPress={() => navigation.navigate('Welcome', { language })}
+            >
+              <Text style={styles.skipText}>{t('skipBtn')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 export default OpenScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   contentContainer: {
     flex: 1,
@@ -109,9 +117,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     justifyContent: 'center',
-    // alignItems: 'center', 
-    // backgroundColor: '#f5f5f5', 
-    // borderRadius: 20, 
   },
 
   // SECTION 1: Top
@@ -145,7 +150,7 @@ const styles = StyleSheet.create({
     fontSize: normalize(22),
     fontWeight: '700',
     textAlign: 'center',
-    color: '#1a1a1a',
+    color: '#333',
     paddingHorizontal: wp(2),
   },
 
@@ -209,7 +214,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.8)',
     borderWidth: 1.5,
     borderColor: '#e0e0e0',
     borderRadius: 30,

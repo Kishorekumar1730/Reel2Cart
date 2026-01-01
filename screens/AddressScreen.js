@@ -9,7 +9,9 @@ import {
     Alert,
     Modal,
     Platform,
-    ActivityIndicator
+    ActivityIndicator,
+    StatusBar,
+    KeyboardAvoidingView
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -106,7 +108,7 @@ const AddressScreen = () => {
 
     const handleAddAddress = async () => {
         if (!name || !mobileNo || !houseNo || !street || !city || !state || !postalCode) {
-            Alert.alert("Error", "Please fill in all required fields.");
+            Alert.alert(t('error'), t('fillRequired'));
             return;
         }
 
@@ -143,16 +145,16 @@ const AddressScreen = () => {
             });
 
             if (response.ok) {
-                Alert.alert("Success", `Address ${editingAddress ? "Updated" : "Added"} Successfully`);
+                Alert.alert(t('success'), editingAddress ? t('addressUpdated') : t('addressAdded'));
                 fetchAddresses(userId);
                 setModalVisible(false);
                 resetForm();
             } else {
-                Alert.alert("Error", "Failed to save address");
+                Alert.alert(t('error'), t('failedSaveAddress'));
             }
         } catch (error) {
             console.log("Error saving address", error);
-            Alert.alert("Error", "Network error");
+            Alert.alert(t('error'), t('networkError'));
         } finally {
             setLoading(false);
         }
@@ -173,10 +175,10 @@ const AddressScreen = () => {
     };
 
     const handleDelete = async (id) => {
-        Alert.alert("Confirm Delete", "Are you sure you want to delete this address?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert(t('confirmDelete'), t('deleteAddressConfirm'), [
+            { text: t('cancel'), style: "cancel" },
             {
-                text: "Delete",
+                text: t('delete'),
                 style: 'destructive',
                 onPress: async () => {
                     setLoading(true);
@@ -186,7 +188,7 @@ const AddressScreen = () => {
                         });
                         if (response.ok) {
                             fetchAddresses(userId);
-                            Alert.alert("Success", "Address Deleted");
+                            Alert.alert(t('success'), t('addressDeleted') || "Address Deleted");
                         }
                     } catch (error) {
                         console.log("Error deleting", error);
@@ -199,274 +201,287 @@ const AddressScreen = () => {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <LinearGradient
-                colors={["#E50914", "#B20710"]}
-                style={styles.header}
-            >
-                <View style={styles.headerContent}>
-                    <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </Pressable>
-                    <Text style={styles.headerTitle}>Your Addresses</Text>
-                    <View style={{ width: 24 }} />
-                </View>
-            </LinearGradient>
-
-            <ScrollView contentContainerStyle={styles.container}>
-                <Pressable
-                    onPress={() => {
-                        resetForm();
-                        setModalVisible(true);
-                    }}
-                    style={styles.addButton}
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.container}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+            <SafeAreaView style={styles.safeArea}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
+                    style={{ flex: 1 }}
                 >
-                    <Text style={styles.addButtonText}>Add a new address</Text>
-                    <Ionicons name="add-circle-outline" size={24} color="#000" />
-                </Pressable>
+                    <View style={styles.header}>
+                        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={24} color="#333" />
+                        </Pressable>
+                        <Text style={styles.headerTitle}>{t('yourAddresses')}</Text>
+                        <View style={{ width: 24 }} />
+                    </View>
 
-                {loading && !modalVisible ? (
-                    <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 20 }} />
-                ) : (
-                    addresses.map((item, index) => (
-                        <Pressable key={index} style={styles.addressCard}>
-                            <View style={styles.addressHeader}>
-                                <Text style={styles.nameText}>{item.name}</Text>
-                                <View style={styles.actionButtons}>
-                                    <Pressable onPress={() => handleEdit(item)} style={styles.iconBtn}>
-                                        <Ionicons name="create-outline" size={20} color="#007AFF" />
-                                    </Pressable>
-                                    <Pressable onPress={() => handleDelete(item._id)} style={styles.iconBtn}>
-                                        <Ionicons name="trash-outline" size={20} color="#D32F2F" />
+                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                        <Pressable
+                            onPress={() => {
+                                resetForm();
+                                setModalVisible(true);
+                            }}
+                            style={styles.addButton}
+                        >
+                            <Text style={styles.addButtonText}>{t('addAddress')}</Text>
+                            <Ionicons name="add-circle-outline" size={28} color="#E50914" />
+                        </Pressable>
+
+                        {loading && !modalVisible ? (
+                            <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 20 }} />
+                        ) : (
+                            addresses.map((item, index) => (
+                                <Pressable key={index} style={styles.addressCard}>
+                                    <View style={styles.addressHeader}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Ionicons name="location" size={20} color="#E50914" style={{ marginRight: 8 }} />
+                                            <Text style={styles.nameText}>{item.name}</Text>
+                                        </View>
+                                        <View style={styles.actionButtons}>
+                                            <Pressable onPress={() => handleEdit(item)} style={styles.iconBtn}>
+                                                <Ionicons name="pencil" size={18} color="#007AFF" />
+                                            </Pressable>
+                                            <Pressable onPress={() => handleDelete(item._id)} style={styles.iconBtn}>
+                                                <Ionicons name="trash-outline" size={18} color="#D32F2F" />
+                                            </Pressable>
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.divider} />
+
+                                    <Text style={styles.addressText}>
+                                        {item.houseNo}, {item.street}
+                                    </Text>
+                                    <Text style={styles.addressText}>
+                                        {item.landmark ? item.landmark + ", " : ""}
+                                        {item.city}, {item.state}, {item.country}
+                                    </Text>
+                                    <Text style={styles.addressText}>{t('mobile')}: {item.mobileNo}</Text>
+                                    <Text style={styles.addressText}>{t('pincode')}: {item.postalCode}</Text>
+
+                                    {source === 'Cart' && (
+                                        <Pressable
+                                            onPress={() => navigation.navigate("Payment", {
+                                                totalAmount: totalAmount,
+                                                items: items,
+                                                shippingAddress: item
+                                            })}
+                                            style={styles.deliverBtn}
+                                        >
+                                            <Text style={styles.deliverBtnText}>{t('deliverToThisAddress')}</Text>
+                                        </Pressable>
+                                    )}
+
+                                    {source === 'OrderDetail' && (
+                                        <Pressable
+                                            onPress={async () => {
+                                                const { orderId } = route.params;
+                                                setLoading(true);
+                                                try {
+                                                    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/address`, {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ address: item }),
+                                                    });
+                                                    if (response.ok) {
+                                                        Alert.alert(t('success'), t('orderAddressUpdated'));
+                                                        navigation.navigate("OrderDetail", { order: { ...route.params.initialOrder, shippingAddress: item } });
+                                                    } else {
+                                                        Alert.alert(t('error'), t('failedUpdateAddress'));
+                                                    }
+                                                } catch (error) {
+                                                    console.log("Error updating order address", error);
+                                                } finally {
+                                                    setLoading(false);
+                                                }
+                                            }}
+                                            style={[styles.deliverBtn, { backgroundColor: '#2196F3', borderColor: '#1976D2' }]}
+                                        >
+                                            <Text style={[styles.deliverBtnText, { color: '#fff' }]}>{t('deliverToThisAddress')}</Text>
+                                        </Pressable>
+                                    )}
+                                </Pressable>
+                            ))
+                        )}
+                    </ScrollView>
+                </KeyboardAvoidingView>
+
+                {/* Add/Edit Modal */}
+                <Modal
+                    animationType="slide"
+                    transparent={false}
+                    visible={modalVisible}
+                    onRequestClose={() => {
+                        setModalVisible(false);
+                        resetForm();
+                    }}
+                >
+                    <SafeAreaView style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Pressable onPress={() => setModalVisible(false)}>
+                                <Text style={{ color: '#007AFF', fontSize: normalize(16) }}>{t('cancel')}</Text>
+                            </Pressable>
+                            <Text style={styles.modalTitle}>{editingAddress ? t('editAddress') : t('addNewAddress')}</Text>
+                            <Pressable onPress={handleAddAddress}>
+                                <Text style={{ color: '#E50914', fontSize: normalize(16), fontWeight: 'bold' }}>{t('save')}</Text>
+                            </Pressable>
+                        </View>
+
+                        <ScrollView contentContainerStyle={styles.formScroll}>
+                            {/* Name */}
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>{t('fullNameRequired')}</Text>
+                                <TextInput
+                                    value={name}
+                                    onChangeText={setName}
+                                    placeholder={t('fullName')}
+                                    style={styles.input}
+                                />
+                            </View>
+
+                            {/* Mobile */}
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>{t('mobileRequired')}</Text>
+                                <TextInput
+                                    value={mobileNo}
+                                    onChangeText={setMobileNo}
+                                    placeholder={t('mobile')}
+                                    keyboardType="phone-pad"
+                                    style={styles.input}
+                                />
+                            </View>
+
+                            {/* House */}
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>{t('addressLine1Required')}</Text>
+                                <TextInput
+                                    value={houseNo}
+                                    onChangeText={setHouseNo}
+                                    placeholder=""
+                                    style={styles.input}
+                                />
+                            </View>
+
+                            {/* Street */}
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>{t('addressLine2Required')}</Text>
+                                <TextInput
+                                    value={street}
+                                    onChangeText={setStreet}
+                                    placeholder=""
+                                    style={styles.input}
+                                />
+                            </View>
+
+                            {/* Landmark */}
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>{t('landmarkOptional')}</Text>
+                                <TextInput
+                                    value={landmark}
+                                    onChangeText={setLandmark}
+                                    placeholder="E.g. near Apollo Hospital"
+                                    style={styles.input}
+                                />
+                            </View>
+
+                            {/* City & State */}
+                            <View style={styles.row}>
+                                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                                    <Text style={styles.label}>{t('townCity')}</Text>
+                                    <TextInput
+                                        value={city}
+                                        onChangeText={setCity}
+                                        placeholder=""
+                                        style={styles.input}
+                                    />
+                                </View>
+                                <View style={[styles.formGroup, { flex: 1 }]}>
+                                    <Text style={styles.label}>{t('state')}</Text>
+                                    <TextInput
+                                        value={state}
+                                        onChangeText={setState}
+                                        placeholder=""
+                                        style={styles.input}
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Zip & Country */}
+                            <View style={styles.row}>
+                                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                                    <Text style={styles.label}>{t('pincode')}</Text>
+                                    <TextInput
+                                        value={postalCode}
+                                        onChangeText={setPostalCode}
+                                        placeholder=""
+                                        keyboardType="numeric"
+                                        style={styles.input}
+                                    />
+                                </View>
+
+                                <View style={[styles.formGroup, { flex: 1 }]}>
+                                    <Text style={styles.label}>{t('countryRegion')}</Text>
+                                    <Pressable
+                                        style={[styles.input, { justifyContent: 'center', backgroundColor: '#fff' }]}
+                                        onPress={() => setCountryModalVisible(true)}
+                                    >
+                                        <Text style={{ fontSize: normalize(16), color: '#333' }}>{country}</Text>
+                                        <Ionicons name="caret-down" size={normalize(16)} color="#666" style={{ position: 'absolute', right: 10 }} />
                                     </Pressable>
                                 </View>
                             </View>
 
-                            <Text style={styles.addressText}>
-                                {item.houseNo}, {item.street}
-                            </Text>
-                            <Text style={styles.addressText}>
-                                {item.landmark ? item.landmark + ", " : ""}
-                                {item.city}, {item.state}, {item.country}
-                            </Text>
-                            <Text style={styles.addressText}>Phone: {item.mobileNo}</Text>
-                            <Text style={styles.addressText}>Pin code: {item.postalCode}</Text>
+                            <Pressable onPress={handleAddAddress} style={styles.saveBtn}>
+                                <Text style={styles.saveBtnText}>{editingAddress ? t('updateAddress') : t('addAddress')}</Text>
+                            </Pressable>
+                        </ScrollView>
 
-                            {source === 'Cart' && (
-                                <Pressable
-                                    onPress={() => navigation.navigate("Payment", {
-                                        totalAmount: totalAmount,
-                                        items: items,
-                                        shippingAddress: item
-                                    })}
-                                    style={styles.deliverBtn}
-                                >
-                                    <Text style={styles.deliverBtnText}>{t('deliverToThisAddress')}</Text>
-                                </Pressable>
-                            )}
-
-                            {source === 'OrderDetail' && (
-                                <Pressable
-                                    onPress={async () => {
-                                        const { orderId } = route.params;
-                                        setLoading(true);
-                                        try {
-                                            const response = await fetch(`${API_BASE_URL}/orders/${orderId}/address`, {
-                                                method: 'PUT',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ address: item }),
-                                            });
-                                            if (response.ok) {
-                                                Alert.alert("Success", "Order address updated");
-                                                navigation.navigate("OrderDetail", { order: { ...route.params.initialOrder, shippingAddress: item } });
-                                            } else {
-                                                Alert.alert("Error", "Failed to update address");
-                                            }
-                                        } catch (error) {
-                                            console.log("Error updating order address", error);
-                                        } finally {
-                                            setLoading(false);
-                                        }
-                                    }}
-                                    style={[styles.deliverBtn, { backgroundColor: '#2196F3', borderColor: '#1976D2' }]}
-                                >
-                                    <Text style={[styles.deliverBtnText, { color: '#fff' }]}>Deliver to this Address</Text>
-                                </Pressable>
-                            )}
-                        </Pressable>
-                    ))
-                )}
-            </ScrollView>
-
-            {/* Add/Edit Modal */}
-            <Modal
-                animationType="slide"
-                transparent={false}
-                visible={modalVisible}
-                onRequestClose={() => {
-                    setModalVisible(false);
-                    resetForm();
-                }}
-            >
-                <SafeAreaView style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Pressable onPress={() => setModalVisible(false)}>
-                            <Text style={{ color: '#007AFF', fontSize: 16 }}>Cancel</Text>
-                        </Pressable>
-                        <Text style={styles.modalTitle}>{editingAddress ? "Edit Address" : "Add New Address"}</Text>
-                        <Pressable onPress={handleAddAddress}>
-                            <Text style={{ color: '#E50914', fontSize: 16, fontWeight: 'bold' }}>Save</Text>
-                        </Pressable>
-                    </View>
-
-                    <ScrollView contentContainerStyle={styles.formScroll}>
-                        {/* Name */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Full Name (Required)</Text>
-                            <TextInput
-                                value={name}
-                                onChangeText={setName}
-                                placeholder="Enter your name"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        {/* Mobile */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Mobile Number (Required)</Text>
-                            <TextInput
-                                value={mobileNo}
-                                onChangeText={setMobileNo}
-                                placeholder="10-digit mobile number"
-                                keyboardType="phone-pad"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        {/* House */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Flat, House no., Building (Required)</Text>
-                            <TextInput
-                                value={houseNo}
-                                onChangeText={setHouseNo}
-                                placeholder=""
-                                style={styles.input}
-                            />
-                        </View>
-
-                        {/* Street */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Area, Street, Sector, Village (Required)</Text>
-                            <TextInput
-                                value={street}
-                                onChangeText={setStreet}
-                                placeholder=""
-                                style={styles.input}
-                            />
-                        </View>
-
-                        {/* Landmark */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Landmark (Optional)</Text>
-                            <TextInput
-                                value={landmark}
-                                onChangeText={setLandmark}
-                                placeholder="E.g. near Apollo Hospital"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        {/* City & State */}
-                        <View style={styles.row}>
-                            <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
-                                <Text style={styles.label}>Town/City</Text>
-                                <TextInput
-                                    value={city}
-                                    onChangeText={setCity}
-                                    placeholder=""
-                                    style={styles.input}
-                                />
+                        {/* Country Selection Modal */}
+                        <Modal
+                            visible={countryModalVisible}
+                            transparent={true}
+                            animationType="slide"
+                            onRequestClose={() => setCountryModalVisible(false)}
+                        >
+                            <View style={styles.countryModalOverlay}>
+                                <View style={styles.countryModalContent}>
+                                    <View style={styles.countryModalHeader}>
+                                        <Text style={styles.countryModalTitle}>{t('selectCountry')}</Text>
+                                        <Pressable onPress={() => setCountryModalVisible(false)}>
+                                            <Ionicons name="close" size={24} color="#000" />
+                                        </Pressable>
+                                    </View>
+                                    <ScrollView>
+                                        {availableCountries.map((c, index) => (
+                                            <Pressable
+                                                key={index}
+                                                style={styles.countryItem}
+                                                onPress={() => {
+                                                    setCountry(c);
+                                                    setCountryModalVisible(false);
+                                                }}
+                                            >
+                                                <Text style={[styles.countryText, country === c && styles.selectedCountryText]}>
+                                                    {c}
+                                                </Text>
+                                                {country === c && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                                            </Pressable>
+                                        ))}
+                                    </ScrollView>
+                                </View>
                             </View>
-                            <View style={[styles.formGroup, { flex: 1 }]}>
-                                <Text style={styles.label}>State</Text>
-                                <TextInput
-                                    value={state}
-                                    onChangeText={setState}
-                                    placeholder=""
-                                    style={styles.input}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Zip & Country */}
-                        <View style={styles.row}>
-                            <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
-                                <Text style={styles.label}>Pincode</Text>
-                                <TextInput
-                                    value={postalCode}
-                                    onChangeText={setPostalCode}
-                                    placeholder=""
-                                    keyboardType="numeric"
-                                    style={styles.input}
-                                />
-                            </View>
-
-                            <View style={[styles.formGroup, { flex: 1 }]}>
-                                <Text style={styles.label}>Country</Text>
-                                <Pressable
-                                    style={[styles.input, { justifyContent: 'center', backgroundColor: '#fff' }]}
-                                    onPress={() => setCountryModalVisible(true)}
-                                >
-                                    <Text style={{ fontSize: 16 }}>{country}</Text>
-                                    <Ionicons name="caret-down" size={16} color="#666" style={{ position: 'absolute', right: 10 }} />
-                                </Pressable>
-                            </View>
-                        </View>
-
-                        <Pressable onPress={handleAddAddress} style={styles.saveBtn}>
-                            <Text style={styles.saveBtnText}>{editingAddress ? "Update Address" : "Add Address"}</Text>
-                        </Pressable>
-
-                    </ScrollView>
-                </SafeAreaView>
-
-                {/* Country Selection Modal */}
-                <Modal
-                    visible={countryModalVisible}
-                    transparent={true}
-                    animationType="slide"
-                    onRequestClose={() => setCountryModalVisible(false)}
-                >
-                    <View style={styles.countryModalOverlay}>
-                        <View style={styles.countryModalContent}>
-                            <View style={styles.countryModalHeader}>
-                                <Text style={styles.countryModalTitle}>Select Country</Text>
-                                <Pressable onPress={() => setCountryModalVisible(false)}>
-                                    <Ionicons name="close" size={24} color="#000" />
-                                </Pressable>
-                            </View>
-                            <ScrollView>
-                                {availableCountries.map((c, index) => (
-                                    <Pressable
-                                        key={index}
-                                        style={styles.countryItem}
-                                        onPress={() => {
-                                            setCountry(c);
-                                            setCountryModalVisible(false);
-                                        }}
-                                    >
-                                        <Text style={[styles.countryText, country === c && styles.selectedCountryText]}>
-                                            {c}
-                                        </Text>
-                                        {country === c && <Ionicons name="checkmark" size={20} color="#E50914" />}
-                                    </Pressable>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    </View>
+                        </Modal>
+                    </SafeAreaView>
                 </Modal>
-            </Modal>
-        </SafeAreaView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
@@ -475,72 +490,97 @@ export default AddressScreen;
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
-    },
-    header: {
-        paddingVertical: 15,
-        paddingHorizontal: 15,
-        elevation: 4,
-    },
-    headerContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#fff",
     },
     container: {
-        padding: 10,
-        paddingBottom: 50,
+        flex: 1,
+    },
+    header: {
+        paddingVertical: hp(2),
+        paddingHorizontal: wp(4),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(255,255,255,0.4)', // Glassmorphic
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.5)',
+    },
+    headerContent: {
+        // Redundant with new header style
+    },
+    backButton: {
+        padding: 5,
+    },
+    headerTitle: {
+        fontSize: normalize(18),
+        fontWeight: "bold",
+        color: "#333", // Dark color for light gradient
+    },
+    scrollContent: {
+        padding: wp(4),
+        paddingBottom: hp(10),
     },
     addButton: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: 15,
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        marginBottom: 15,
+        padding: wp(4),
+        backgroundColor: "rgba(255,255,255,0.8)",
+        borderRadius: 12,
+        marginBottom: hp(2),
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: "rgba(255,255,255,0.6)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     addButtonText: {
-        fontSize: 16,
+        fontSize: normalize(16),
         color: "#333",
+        fontWeight: '500',
     },
     addressCard: {
-        backgroundColor: "#fff",
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 10,
+        backgroundColor: "rgba(255,255,255,0.9)",
+        padding: wp(4),
+        borderRadius: 12,
+        marginBottom: hp(2),
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: "rgba(0,0,0,0.05)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     addressHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 5,
+        marginBottom: hp(1),
     },
     nameText: {
-        fontSize: 16,
+        fontSize: normalize(16),
         fontWeight: "bold",
-        marginBottom: 5,
+        color: '#333',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginVertical: hp(1),
     },
     addressText: {
-        fontSize: 14,
+        fontSize: normalize(14),
         color: "#555",
-        marginBottom: 3,
+        marginBottom: hp(0.5),
+        lineHeight: normalize(24),
     },
     actionButtons: {
         flexDirection: 'row',
     },
     iconBtn: {
         padding: 5,
-        marginLeft: 10,
+        marginLeft: wp(2),
     },
 
     // Modal Styles
@@ -552,34 +592,34 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 15,
+        padding: wp(4),
         borderBottomWidth: 1,
         borderColor: '#eee',
     },
     modalTitle: {
-        fontSize: 18,
+        fontSize: normalize(17),
         fontWeight: 'bold',
     },
     formScroll: {
-        padding: 20,
+        padding: wp(5),
     },
     formGroup: {
-        marginBottom: 15,
+        marginBottom: hp(2),
     },
     label: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginBottom: 5,
+        fontSize: normalize(14),
+        fontWeight: '600',
+        marginBottom: hp(1),
         color: '#333',
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 5,
-        padding: 10,
-        fontSize: 16,
-        backgroundColor: '#fff',
-        height: 45,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: wp(3),
+        fontSize: normalize(15),
+        backgroundColor: '#f9f9f9',
+        minHeight: hp(6),
     },
     row: {
         flexDirection: 'row',
@@ -587,27 +627,27 @@ const styles = StyleSheet.create({
     },
     saveBtn: {
         backgroundColor: '#E50914',
-        padding: 15,
-        borderRadius: 5,
+        padding: hp(1.8),
+        borderRadius: 8,
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: hp(2),
     },
     saveBtnText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: normalize(16),
         fontWeight: 'bold',
     },
     deliverBtn: {
         backgroundColor: '#FFD814',
-        padding: 10,
-        borderRadius: 5,
-        marginTop: 10,
+        padding: hp(1.5),
+        borderRadius: 8,
+        marginTop: hp(2),
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#FCD200'
     },
     deliverBtnText: {
-        fontSize: 16,
+        fontSize: normalize(16),
         color: '#333',
         fontWeight: 'bold'
     },
@@ -633,7 +673,7 @@ const styles = StyleSheet.create({
         borderColor: '#eee',
     },
     countryModalTitle: {
-        fontSize: 18,
+        fontSize: normalize(18),
         fontWeight: 'bold',
     },
     countryItem: {
@@ -646,7 +686,7 @@ const styles = StyleSheet.create({
         borderColor: '#f0f0f0',
     },
     countryText: {
-        fontSize: 16,
+        fontSize: normalize(16),
         color: '#333',
     },
     selectedCountryText: {

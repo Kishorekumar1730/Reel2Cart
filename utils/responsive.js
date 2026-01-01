@@ -2,48 +2,31 @@ import { Dimensions, PixelRatio, Platform } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Robust Tablet Detection
-// Checks if the smallest dimension is at least 600px (standard Android/iOS tablet definition)
-const isTabletDevice = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) >= 600;
+const wp = (widthPercent) => {
+    const elemWidth = typeof widthPercent === "number" ? widthPercent : parseFloat(widthPercent);
+    return PixelRatio.roundToNearestPixel(SCREEN_WIDTH * elemWidth / 100);
+};
 
-// Base width for scaling
-// 375 is standard iPhone width. 768 is standard iPad width.
-const baseWidth = isTabletDevice ? 768 : 375;
+const hp = (heightPercent) => {
+    const elemHeight = typeof heightPercent === "number" ? heightPercent : parseFloat(heightPercent);
+    return PixelRatio.roundToNearestPixel(SCREEN_HEIGHT * elemHeight / 100);
+};
 
-const scale = SCREEN_WIDTH / baseWidth;
+// Base width of standard mobile screen (iPhone 11 Pro / X)
+const baseWidth = 375;
 
-/**
- * Normalizes font size and element size based on screen width.
- * Prevents elements from becoming too large on tablets.
- */
-export function normalize(size) {
+const normalize = (size) => {
+    const scale = SCREEN_WIDTH / baseWidth;
     const newSize = size * scale;
     if (Platform.OS === 'ios') {
         return Math.round(PixelRatio.roundToNearestPixel(newSize));
     } else {
-        return Math.round(PixelRatio.roundToNearestPixel(newSize)) - 1;
+        return Math.round(PixelRatio.roundToNearestPixel(newSize)) - 2;
     }
-}
-
-/**
- * Width Percentage
- */
-export const wp = (percentage) => {
-    const value = (percentage * SCREEN_WIDTH) / 100;
-    return Math.round(value);
 };
 
-/**
- * Height Percentage
- */
-export const hp = (percentage) => {
-    const value = (percentage * SCREEN_HEIGHT) / 100;
-    return Math.round(value);
+const isTablet = () => {
+    return SCREEN_WIDTH >= 768; // Simple breakpoint for tablets
 };
 
-export const isTablet = () => isTabletDevice;
-
-export const SCREEN_DIMENSIONS = {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT
-};
+export { wp, hp, normalize, isTablet };

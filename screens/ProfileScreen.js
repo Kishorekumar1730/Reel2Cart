@@ -125,230 +125,232 @@ const ProfileScreen = () => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={{ flex: 1 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* Guest Logic */}
-                {(!userInfo || userInfo.isGuest) && (
-                    <View style={styles.guestContainer}>
-                        <Ionicons name="person-circle-outline" size={80} color="#ccc" style={{ marginBottom: 10 }} />
-                        <Text style={styles.guestTitle}>Welcome to Reel2Cart</Text>
-                        <Text style={styles.guestSubtitle}>Sign in to view your profile, track orders, and access seller features.</Text>
+                    {/* Guest Logic */}
+                    {(!userInfo || userInfo.isGuest) && (
+                        <View style={styles.guestContainer}>
+                            <Ionicons name="person-circle-outline" size={80} color="#ccc" style={{ marginBottom: 10 }} />
+                            <Text style={styles.guestTitle}>{t('welcomeToReel2Cart')}</Text>
+                            <Text style={styles.guestSubtitle}>{t('guestProfileSubtitle')}</Text>
 
-                        <AnimatedButton
-                            style={styles.guestLoginBtn}
-                            onPress={() => {
-                                navigation.dispatch(
-                                    CommonActions.reset({
-                                        index: 0,
-                                        routes: [{ name: 'Login' }],
-                                    })
-                                );
-                            }}
-                        >
-                            <Text style={styles.guestLoginText}>Sign In / Join</Text>
-                        </AnimatedButton>
+                            <AnimatedButton
+                                style={styles.guestLoginBtn}
+                                onPress={() => {
+                                    navigation.dispatch(
+                                        CommonActions.reset({
+                                            index: 0,
+                                            routes: [{ name: 'Login' }],
+                                        })
+                                    );
+                                }}
+                            >
+                                <Text style={styles.guestLoginText}>{t('signInJoin')}</Text>
+                            </AnimatedButton>
 
-                        <View style={styles.sectionContainer}>
-                            <Text style={styles.sectionTitle}>{t('legalSupport')}</Text>
-                            <MenuItem icon="document-text-outline" label={t('terms')} onPress={() => { }} />
-                            <MenuItem icon="shield-checkmark-outline" label={t('privacy')} onPress={() => { }} />
-                            <MenuItem icon="help-circle-outline" label={t('help')} onPress={() => navigation.navigate('Help')} />
+                            <View style={styles.sectionContainer}>
+                                <Text style={styles.sectionTitle}>{t('legalSupport')}</Text>
+                                <MenuItem icon="document-text-outline" label={t('terms')} onPress={() => { }} />
+                                <MenuItem icon="shield-checkmark-outline" label={t('privacy')} onPress={() => { }} />
+                                <MenuItem icon="help-circle-outline" label={t('help')} onPress={() => navigation.navigate('Help')} />
+                            </View>
                         </View>
-                    </View>
-                )}
+                    )}
 
-                {/* Authenticated User Content */}
-                {userInfo && !userInfo.isGuest && (
-                    <>
-                        {/* ... Header and Stats ... */}
-                        <LinearGradient
-                            colors={['#E50914', '#B20710']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.header}
-                        >
-                            <View style={styles.headerContent}>
-                                <View style={styles.profileSection}>
-                                    <View style={styles.avatarContainer}>
-                                        {userInfo?.profileImage ? (
-                                            <Image source={{ uri: userInfo.profileImage }} style={{ width: 60, height: 60, borderRadius: 30 }} />
-                                        ) : (
-                                            <Text style={styles.avatarText}>
-                                                {userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : (userInfo?.email ? userInfo.email.charAt(0).toUpperCase() : 'U')}
+                    {/* Authenticated User Content */}
+                    {userInfo && !userInfo.isGuest && (
+                        <>
+                            {/* ... Header and Stats ... */}
+                            <View style={styles.header}>
+                                <View style={styles.headerContent}>
+                                    <View style={styles.profileSection}>
+                                        <View style={styles.avatarContainer}>
+                                            {userInfo?.profileImage ? (
+                                                <Image source={{ uri: userInfo.profileImage }} style={{ width: 60, height: 60, borderRadius: 30 }} />
+                                            ) : (
+                                                <Text style={styles.avatarText}>
+                                                    {userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : (userInfo?.email ? userInfo.email.charAt(0).toUpperCase() : 'U')}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <View style={styles.userInfo}>
+                                            <Text style={styles.userName}>
+                                                {t('hello')}, {userInfo?.name || (userInfo?.email ? userInfo.email.split('@')[0] : t('user'))}
                                             </Text>
-                                        )}
+                                            <Text style={styles.userEmail}>{userInfo?.email}</Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.userInfo}>
-                                        <Text style={styles.userName}>
-                                            {t('hello')}, {userInfo?.name || (userInfo?.email ? userInfo.email.split('@')[0] : t('user'))}
-                                        </Text>
-                                        <Text style={styles.userEmail}>{userInfo?.email}</Text>
+                                    <AnimatedButton style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
+                                        <Feather name="edit-2" size={20} color="#555" />
+                                    </AnimatedButton>
+                                </View>
+
+                                <View style={styles.statsContainer}>
+                                    <View style={styles.statItem}>
+                                        <Text style={styles.statNumber}>{stats.orderCount}</Text>
+                                        <Text style={styles.statLabel}>{t('orders')}</Text>
                                     </View>
+                                    <View style={styles.statDivider} />
+                                    <View style={styles.statItem}>
+                                        <Text style={styles.statNumber}>{stats.wishlistCount}</Text>
+                                        <Text style={styles.statLabel}>{t('wishlist')}</Text>
+                                    </View>
+                                    <View style={styles.statDivider} />
+                                    <View style={styles.statItem}>
+                                        <Text style={styles.statNumber}>{stats.couponCount}</Text>
+                                        <Text style={styles.statLabel}>{t('coupons')}</Text>
+                                    </View>
+                                    <View style={styles.statDivider} />
+                                    <TouchableOpacity
+                                        style={styles.statItem}
+                                        onPress={() => userInfo?._id && navigation.navigate("FollowList", { id: userInfo._id, type: 'user_following', title: 'Following' })}
+                                    >
+                                        <Text style={styles.statNumber}>{stats.followingCount || 0}</Text>
+                                        <Text style={styles.statLabel}>{t('following')}</Text>
+                                    </TouchableOpacity>
                                 </View>
-                                <AnimatedButton style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
-                                    <Feather name="edit-2" size={20} color="#fff" />
-                                </AnimatedButton>
                             </View>
 
-                            <View style={styles.statsContainer}>
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statNumber}>{stats.orderCount}</Text>
-                                    <Text style={styles.statLabel}>{t('orders')}</Text>
+                            {/* Quick Actions Grid */}
+                            <View style={styles.sectionContainer}>
+                                <Text style={styles.sectionTitle}>{t('quickActions')}</Text>
+                                <View style={styles.quickActionsGrid}>
+                                    <QuickAction
+                                        icon="cube-outline"
+                                        label={t('orders')}
+                                        color="#2196F3"
+                                        onPress={() => navigation.navigate('Orders')}
+                                    />
+                                    <QuickAction
+                                        icon="heart-outline"
+                                        label={t('wishlist')}
+                                        color="#E91E63"
+                                        onPress={() => navigation.navigate('Favourite')}
+                                    />
+                                    <QuickAction
+                                        icon="card-outline"
+                                        label={t('payments')}
+                                        color="#4CAF50"
+                                        onPress={() => navigation.navigate('PaymentMethod')}
+                                    />
+                                    <QuickAction
+                                        icon="headset-outline"
+                                        label={t('help')}
+                                        color="#FF9800"
+                                        onPress={() => navigation.navigate('Help')}
+                                    />
                                 </View>
-                                <View style={styles.statDivider} />
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statNumber}>{stats.wishlistCount}</Text>
-                                    <Text style={styles.statLabel}>{t('wishlist')}</Text>
+                            </View>
+
+                            {/* Admin Panel - Only for Owner */}
+                            {(userInfo?.email === 'shopflix2025@gmail.com' || userInfo?.role === 'admin') && (
+                                <View style={[styles.sectionContainer, { borderColor: '#1a237e', borderWidth: 1 }]}>
+                                    <Text style={[styles.sectionTitle, { color: '#1a237e' }]}>{t('administration') || 'Administration'}</Text>
+                                    <MenuItem
+                                        icon="shield-checkmark"
+                                        label={t('adminDashboard')}
+                                        subLabel={t('adminDashboardSubtitle')}
+                                        onPress={() => navigation.navigate('AdminDashboard')}
+                                        color="#1a237e"
+                                    />
                                 </View>
-                                <View style={styles.statDivider} />
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statNumber}>{stats.couponCount}</Text>
-                                    <Text style={styles.statLabel}>Coupons</Text>
-                                </View>
-                                <View style={styles.statDivider} />
-                                <TouchableOpacity
-                                    style={styles.statItem}
-                                    onPress={() => userInfo?._id && navigation.navigate("FollowList", { id: userInfo._id, type: 'user_following', title: 'Following' })}
-                                >
-                                    <Text style={styles.statNumber}>{stats.followingCount || 0}</Text>
-                                    <Text style={styles.statLabel}>Following</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </LinearGradient>
-
-                        {/* Quick Actions Grid */}
-                        <View style={styles.sectionContainer}>
-                            <Text style={styles.sectionTitle}>{t('quickActions')}</Text>
-                            <View style={styles.quickActionsGrid}>
-                                <QuickAction
-                                    icon="cube-outline"
-                                    label={t('orders')}
-                                    color="#2196F3"
-                                    onPress={() => navigation.navigate('Orders')}
-                                />
-                                <QuickAction
-                                    icon="heart-outline"
-                                    label={t('wishlist')}
-                                    color="#E91E63"
-                                    onPress={() => navigation.navigate('Favourite')}
-                                />
-                                <QuickAction
-                                    icon="card-outline"
-                                    label={t('payments')}
-                                    color="#4CAF50"
-                                    onPress={() => navigation.navigate('PaymentMethod')}
-                                />
-                                <QuickAction
-                                    icon="headset-outline"
-                                    label={t('help')}
-                                    color="#FF9800"
-                                    onPress={() => navigation.navigate('Help')}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Admin Panel - Only for Owner */}
-                        {(userInfo?.email === 'shopflix2025@gmail.com' || userInfo?.role === 'admin') && (
-                            <View style={[styles.sectionContainer, { borderColor: '#1a237e', borderWidth: 1 }]}>
-                                <Text style={[styles.sectionTitle, { color: '#1a237e' }]}>Administration</Text>
-                                <MenuItem
-                                    icon="shield-checkmark"
-                                    label="Admin Dashboard"
-                                    subLabel="Manage App, Sellers & Offers"
-                                    onPress={() => navigation.navigate('AdminDashboard')}
-                                    color="#1a237e"
-                                />
-                            </View>
-                        )}
-
-                        {/* Sell on ShopFlix - Dynamic Section */}
-                        <View style={styles.sectionContainer}>
-                            <Text style={styles.sectionTitle}>{isSeller ? "My Business" : "Work with Reel2Cart"}</Text>
-
-                            {isSeller ? (
-                                <MenuItem
-                                    icon="analytics-outline"
-                                    label="Seller Dashboard"
-                                    subLabel="Manage orders and products"
-                                    onPress={() => navigation.navigate('SellerDashboard')}
-                                    color="#E50914"
-                                />
-                            ) : (
-                                <MenuItem
-                                    icon="briefcase-outline"
-                                    label="Create your free business account"
-                                    subLabel="Reach millions of customers"
-                                    onPress={() => navigation.navigate('SellerOnboarding')}
-                                    color="#E50914"
-                                />
                             )}
 
-                            <MenuItem
-                                icon="bicycle-outline"
-                                label="Delivery Partner Hub"
-                                subLabel="Deliver orders & earn money"
-                                onPress={() => navigation.navigate('DeliveryDashboard')}
-                                color="#4CAF50"
-                            />
-                        </View>
+                            {/* Sell on ShopFlix - Dynamic Section */}
+                            <View style={styles.sectionContainer}>
+                                <Text style={styles.sectionTitle}>{isSeller ? t('myBusiness') : t('workWithReel2Cart')}</Text>
 
-                        {/* Account Settings */}
-                        <View style={styles.sectionContainer}>
-                            <Text style={styles.sectionTitle}>{t('accountSettings')}</Text>
-                            <MenuItem
-                                icon="location-outline"
-                                label={t('yourAddresses')}
-                                subLabel={t('manageAddress')}
-                                onPress={() => navigation.navigate('Address')}
-                            />
-                            <MenuItem
-                                icon="lock-closed-outline"
-                                label={t('loginSecurity')}
-                                subLabel="Password, 2FA"
-                                onPress={() => navigation.navigate('LoginSecurity')}
-                            />
-                            <MenuItem
-                                icon="notifications-outline"
-                                label={t('notifications')}
-                                subLabel="Offers, Order updates"
-                                onPress={() => navigation.navigate('NotificationList')}
-                            />
-                            <MenuItem
-                                icon="language-outline"
-                                label={t('language')}
-                                subLabel="English/Regional"
-                                onPress={() => navigation.navigate('Language', { fromSettings: true })}
-                            />
-                        </View>
+                                {isSeller ? (
+                                    <MenuItem
+                                        icon="analytics-outline"
+                                        label={t('sellerDashboard')}
+                                        subLabel={t('manageOrdersProducts')}
+                                        onPress={() => navigation.navigate('SellerDashboard')}
+                                        color="#E50914"
+                                    />
+                                ) : (
+                                    <MenuItem
+                                        icon="briefcase-outline"
+                                        label={t('createFreeBusinessAccount')}
+                                        subLabel={t('reachMillions')}
+                                        onPress={() => navigation.navigate('SellerOnboarding')}
+                                        color="#E50914"
+                                    />
+                                )}
 
-                        {/* Legal & Support */}
-                        <View style={styles.sectionContainer}>
-                            <Text style={styles.sectionTitle}>{t('legalSupport')}</Text>
-                            <MenuItem
-                                icon="document-text-outline"
-                                label={t('terms')}
-                                onPress={() => { }}
-                            />
-                            <MenuItem
-                                icon="shield-checkmark-outline"
-                                label={t('privacy')}
-                                onPress={() => { }}
-                            />
-                        </View>
+                                <MenuItem
+                                    icon="bicycle-outline"
+                                    label={t('deliveryPartnerHub') || "Delivery Partner Hub"}
+                                    subLabel={t('deliverEarn') || "Deliver orders & earn money"}
+                                    onPress={() => navigation.navigate('DeliveryDashboard')}
+                                    color="#4CAF50"
+                                />
+                            </View>
 
-                        {/* Logout Button */}
-                        <AnimatedButton style={styles.logoutButton} onPress={handleLogout}>
-                            <Ionicons name="log-out-outline" size={24} color="#D32F2F" />
-                            <Text style={styles.logoutText}>{t('logout')}</Text>
-                        </AnimatedButton>
-                    </>
-                )}
+                            {/* Account Settings */}
+                            <View style={styles.sectionContainer}>
+                                <Text style={styles.sectionTitle}>{t('accountSettings')}</Text>
+                                <MenuItem
+                                    icon="location-outline"
+                                    label={t('yourAddresses')}
+                                    subLabel={t('manageAddress')}
+                                    onPress={() => navigation.navigate('Address')}
+                                />
+                                <MenuItem
+                                    icon="lock-closed-outline"
+                                    label={t('loginSecurity')}
+                                    subLabel={t('password2FA')}
+                                    onPress={() => navigation.navigate('LoginSecurity')}
+                                />
+                                <MenuItem
+                                    icon="notifications-outline"
+                                    label={t('notifications')}
+                                    subLabel={t('offersOrderUpdates')}
+                                    onPress={() => navigation.navigate('NotificationList')}
+                                />
+                                <MenuItem
+                                    icon="language-outline"
+                                    label={t('language')}
+                                    subLabel={t('langSubtitle')}
+                                    onPress={() => navigation.navigate('Language', { fromSettings: true })}
+                                />
+                            </View>
 
-                <Text style={styles.versionText}>Version 1.0.0</Text>
+                            {/* Legal & Support */}
+                            <View style={styles.sectionContainer}>
+                                <Text style={styles.sectionTitle}>{t('legalSupport')}</Text>
+                                <MenuItem
+                                    icon="document-text-outline"
+                                    label={t('terms')}
+                                    onPress={() => { }}
+                                />
+                                <MenuItem
+                                    icon="shield-checkmark-outline"
+                                    label={t('privacy')}
+                                    onPress={() => { }}
+                                />
+                            </View>
 
-            </ScrollView>
-        </SafeAreaView>
+                            {/* Logout Button */}
+                            <AnimatedButton style={styles.logoutButton} onPress={handleLogout}>
+                                <Ionicons name="log-out-outline" size={24} color="#D32F2F" />
+                                <Text style={styles.logoutText}>{t('logout')}</Text>
+                            </AnimatedButton>
+                        </>
+                    )}
+
+                    <Text style={styles.versionText}>{t('version') || 'Version'} 1.0.0</Text>
+
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
@@ -357,42 +359,43 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: 'transparent',
     },
     scrollContent: {
-        paddingBottom: 20,
+        paddingBottom: 110,
     },
     header: {
-        paddingHorizontal: wp(5),
-        paddingTop: hp(2),
-        paddingBottom: hp(3),
-        borderBottomLeftRadius: 25,
-        borderBottomRightRadius: 25,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
+        marginHorizontal: 15,
+        marginTop: 15,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.4)',
+        padding: 20,
     },
     headerContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: hp(3),
+        marginBottom: 20,
     },
     profileSection: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     avatarContainer: {
-        width: normalize(60),
-        height: normalize(60),
-        borderRadius: normalize(30),
+        width: 66,
+        height: 66,
+        borderRadius: 33,
         backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
-        elevation: 3,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
     },
     avatarText: {
         fontSize: normalize(28),
@@ -404,60 +407,74 @@ const styles = StyleSheet.create({
     },
     userName: {
         fontSize: normalize(20),
-        fontWeight: 'bold',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#111',
+        marginBottom: 4,
     },
     userEmail: {
         fontSize: normalize(14),
-        color: 'rgba(255,255,255,0.8)',
+        color: '#666',
+        fontWeight: '500',
     },
     editButton: {
-        padding: normalize(8),
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        padding: 10,
+        backgroundColor: '#fff',
         borderRadius: 20,
+        elevation: 2,
     },
     statsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: '#fff',
         borderRadius: 15,
-        paddingVertical: hp(1.5),
+        paddingVertical: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
     },
     statItem: {
         alignItems: 'center',
+        flex: 1, // Ensure equal width allocation
+        paddingHorizontal: 2,
     },
     statNumber: {
         fontSize: normalize(18),
-        fontWeight: 'bold',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#111',
     },
     statLabel: {
         fontSize: normalize(12),
-        color: 'rgba(255,255,255,0.9)',
+        color: '#888',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        textAlign: 'center',
+        lineHeight: normalize(14), // Improve stacking
+        marginTop: 4,
     },
     statDivider: {
         width: 1,
-        height: '100%',
-        backgroundColor: 'rgba(255,255,255,0.3)',
+        height: '70%',
+        backgroundColor: '#f0f0f0',
+        alignSelf: 'center',
     },
     sectionContainer: {
-        marginTop: hp(2),
-        backgroundColor: '#fff',
-        paddingHorizontal: wp(5),
-        paddingVertical: hp(2),
-        marginHorizontal: wp(3), // Floating card look
-        borderRadius: 15,
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        marginTop: 20,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        marginHorizontal: 15,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.5)',
     },
     sectionTitle: {
         fontSize: normalize(16),
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: hp(1.5),
+        marginBottom: 15,
+        marginLeft: 5,
     },
     quickActionsGrid: {
         flexDirection: 'row',
@@ -465,71 +482,77 @@ const styles = StyleSheet.create({
     },
     quickActionItem: {
         alignItems: 'center',
-        width: '22%',
+        width: '23%',
     },
     quickActionIcon: {
-        width: normalize(50),
-        height: normalize(50),
-        borderRadius: normalize(25),
+        width: 50,
+        height: 50,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
     },
     quickActionText: {
-        fontSize: normalize(12),
+        fontSize: normalize(11),
         color: '#555',
         textAlign: 'center',
+        fontWeight: '600',
+        lineHeight: normalize(14),
+        paddingHorizontal: 2,
     },
     menuItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: hp(1.2),
+        paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: 'rgba(0,0,0,0.03)',
     },
     menuLeft: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     menuIconContainer: {
-        width: normalize(36),
-        height: normalize(36),
-        borderRadius: normalize(18),
+        width: 36,
+        height: 36,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 15,
     },
     menuTextContainer: {
         justifyContent: 'center',
+        flex: 1, // Ensure text container takes available space
+        paddingRight: 10, // Prevent text touching the arrow
     },
     menuLabel: {
-        fontSize: normalize(14),
-        fontWeight: '500',
+        fontSize: normalize(15),
+        fontWeight: '600',
         color: '#333',
+        lineHeight: normalize(20), // Better spacing for wrapped text
     },
     menuSubLabel: {
         fontSize: normalize(12),
         color: '#888',
         marginTop: 2,
+        lineHeight: normalize(16), // Better spacing
     },
     logoutButton: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: hp(3),
-        marginBottom: hp(1),
+        marginTop: 30,
+        marginBottom: 10,
         backgroundColor: '#fff',
-        paddingVertical: hp(1.5),
-        marginHorizontal: wp(3),
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: '#eee',
+        paddingVertical: 15,
+        marginHorizontal: 15,
+        borderRadius: 30,
+        elevation: 2,
     },
     logoutText: {
         fontSize: normalize(16),
         fontWeight: 'bold',
-        color: '#D32F2F',
+        color: '#E50914',
         marginLeft: 8,
     },
     badge: {
@@ -546,10 +569,10 @@ const styles = StyleSheet.create({
     },
     versionText: {
         textAlign: 'center',
-        color: '#bbb',
+        color: '#999',
         fontSize: normalize(12),
         marginBottom: 20,
-        marginTop: 5,
+        marginTop: 10,
     },
     guestContainer: {
         flex: 1,
@@ -569,7 +592,7 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center',
         marginBottom: 30,
-        lineHeight: 20,
+        lineHeight: normalize(24),
     },
     guestLoginBtn: {
         backgroundColor: '#E50914',

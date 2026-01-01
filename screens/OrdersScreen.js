@@ -67,23 +67,63 @@ const OrdersScreen = () => {
         }
     };
 
-    const handleDeleteOrder = (orderId) => {
-        // Alert handled inside delete? Or ask confirmation here.
-        // Alert handled here.
+    const getStatusBgColor = (status) => {
+        switch (status) {
+            case 'Paid': return '#E8F5E9';
+            case 'Processing': return '#FFF3E0';
+            case 'Delivered': return '#E3F2FD';
+            case 'Cancelled': return '#FFEBEE';
+            default: return '#F5F5F5';
+        }
     };
 
     const renderOrderItem = ({ item }) => (
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("OrderDetail", { order: item })}>
+        <TouchableOpacity style={styles.glassCard} onPress={() => navigation.navigate("OrderDetail", { order: item })} activeOpacity={0.8}>
             <View style={styles.cardHeader}>
-                <Text style={styles.orderId}>Order #{item._id.slice(-6).toUpperCase()}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={[styles.status, { color: getStatusColor(item.status), marginRight: 10 }]}>{item.status}</Text>
-                    {/* Delete Icon */}
-                    <TouchableOpacity onPress={() => {
-                        Alert.alert("Delete Order", "Are you sure you want to delete this order from history?", [
-                            { text: "Cancel", style: "cancel" },
+                <View>
+                    <Text style={styles.orderId}>{t('orderNumber')}{item._id.slice(-6).toUpperCase()}</Text>
+                    <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(item.status) }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
+                </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            {item.products.slice(0, 2).map((prod, index) => (
+                <View key={index} style={styles.productRow}>
+                    <Image source={{ uri: prod.image }} style={styles.productImage} resizeMode="cover" />
+                    <View style={styles.productInfo}>
+                        <Text style={styles.productName} numberOfLines={1}>{prod.name}</Text>
+                        <View style={styles.row}>
+                            <Text style={styles.productQty}>{t('qty')}: {prod.quantity}</Text>
+                            <Text style={styles.productPrice}>{formatPrice(prod.price)}</Text>
+                        </View>
+                    </View>
+                </View>
+            ))}
+
+            {item.products.length > 2 && (
+                <Text style={styles.moreItemsText}>+ {item.products.length - 2} {t('moreItems')}</Text>
+            )}
+
+            <View style={styles.divider} />
+
+            <View style={styles.cardFooter}>
+                <View>
+                    <Text style={styles.totalLabel}>{t('totalAmount')}</Text>
+                    <Text style={styles.totalAmount}>{formatPrice(item.totalAmount)}</Text>
+                </View>
+
+                {/* Delete Icon */}
+                <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => {
+                        Alert.alert(t('deleteOrder'), t('deleteOrderConfirm'), [
+                            { text: t('cancel'), style: "cancel" },
                             {
-                                text: "Delete", style: "destructive", onPress: async () => {
+                                text: t('delete'), style: "destructive", onPress: async () => {
                                     try {
                                         const response = await fetch(`${API_BASE_URL}/orders/${item._id}`, {
                                             method: 'DELETE'
@@ -97,168 +137,192 @@ const OrdersScreen = () => {
                                 }
                             }
                         ]);
-                    }}>
-                        <Ionicons name="trash-outline" size={20} color="#999" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-            <Text style={styles.date}>{formatDate(item.createdAt)}</Text>
-
-            <View style={styles.divider} />
-
-            {item.products.map((prod, index) => (
-                <View key={index} style={styles.productRow}>
-                    <Image source={{ uri: prod.image }} style={styles.productImage} resizeMode="contain" />
-                    <View style={styles.productInfo}>
-                        <Text style={styles.productName} numberOfLines={1}>{prod.name}</Text>
-                        <Text style={styles.productQty}>Qty: {prod.quantity} × {formatPrice(prod.price)}</Text>
-                    </View>
-                </View>
-            ))}
-
-            <View style={styles.divider} />
-
-            <View style={styles.cardFooter}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>{formatPrice(item.totalAmount)}</Text>
+                    }}
+                >
+                    <Ionicons name="trash-outline" size={normalize(18)} color="#999" />
+                </TouchableOpacity>
             </View>
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#E50914" />
-            {/* Header */}
-            <LinearGradient colors={["#E50914", "#B20710"]} style={styles.header}>
-                <View style={styles.headerContent}>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+
+                {/* Header */}
+                <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                        <Ionicons name="chevron-back" size={normalize(26)} color="#333" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{t('orders') || "My Orders"}</Text>
-                    <View style={{ width: 24 }} />
+                    <View style={{ width: wp(10) }} />
                 </View>
-            </LinearGradient>
 
-            {loading && orders.length === 0 ? (
-                <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#E50914" />
-                </View>
-            ) : orders.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Ionicons name="cube-outline" size={80} color="#ccc" />
-                    <Text style={styles.emptyText}>No orders yet!</Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={orders}
-                    renderItem={renderOrderItem}
-                    keyExtractor={item => item._id}
-                    contentContainerStyle={styles.listContent}
-                />
-            )}
-        </SafeAreaView>
+                {loading && orders.length === 0 ? (
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color="#E50914" />
+                    </View>
+                ) : orders.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <View style={styles.emptyIconBox}>
+                            <Ionicons name="cube-outline" size={normalize(40)} color="#999" />
+                        </View>
+                        <Text style={styles.emptyText}>{t('noOrdersYet')}</Text>
+                        <Text style={styles.emptySubText}>{t('startShoppingOrders')}</Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={orders}
+                        renderItem={renderOrderItem}
+                        keyExtractor={item => item._id}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                    />
+                )}
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    gradientContainer: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+    },
+    safeArea: {
+        flex: 1,
     },
     header: {
-        paddingVertical: 15,
-        paddingHorizontal: 15,
-        elevation: 4,
-    },
-    headerContent: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#fff",
+        fontSize: normalize(20),
+        fontWeight: '700',
+        color: '#1a1a1a',
     },
     backButton: {
         padding: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderRadius: 12,
     },
     listContent: {
-        padding: 15,
+        paddingHorizontal: wp(5),
+        paddingBottom: hp(5),
     },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 15,
-        marginBottom: 15,
+    glassCard: {
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 20,
+        padding: wp(4),
+        marginBottom: hp(2),
+        borderWidth: 1,
+        borderColor: '#fff',
+        shadowColor: "#E8DFF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
         elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
     },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 5,
+        alignItems: 'flex-start',
     },
     orderId: {
-        fontSize: normalize(14),
-        fontWeight: 'bold',
+        fontSize: normalize(15),
+        fontWeight: '800',
         color: '#333',
-    },
-    status: {
-        fontSize: normalize(12),
-        fontWeight: 'bold',
+        marginBottom: 4,
     },
     date: {
-        fontSize: normalize(12),
-        color: '#777',
-        marginBottom: 10,
+        fontSize: normalize(11),
+        color: '#888',
+    },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
+    },
+    statusText: {
+        fontSize: normalize(11),
+        fontWeight: '700',
     },
     divider: {
         height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 10,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        marginVertical: hp(1.5),
     },
     productRow: {
         flexDirection: 'row',
-        marginBottom: 10,
+        marginBottom: hp(1.5),
         alignItems: 'center',
     },
     productImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 5,
-        marginRight: 10,
+        width: wp(12),
+        height: wp(12),
+        borderRadius: 10,
         backgroundColor: '#f9f9f9',
+        marginRight: wp(3),
     },
     productInfo: {
         flex: 1,
+        justifyContent: 'center',
     },
     productName: {
         fontSize: normalize(13),
+        fontWeight: '600',
         color: '#333',
-        marginBottom: 2,
+        marginBottom: 4,
+    },
+    row: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
     },
     productQty: {
         fontSize: normalize(12),
         color: '#666',
     },
+    productPrice: {
+        fontSize: normalize(12),
+        fontWeight: '700',
+        color: '#333',
+    },
+    moreItemsText: {
+        fontSize: normalize(12),
+        color: '#777',
+        fontStyle: 'italic',
+        marginBottom: hp(1),
+    },
     cardFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-end',
     },
     totalLabel: {
-        fontSize: normalize(14),
-        color: '#555',
+        fontSize: normalize(12),
+        color: '#666',
+        fontWeight: '500',
+        marginBottom: 2,
     },
     totalAmount: {
         fontSize: normalize(16),
-        fontWeight: 'bold',
-        color: '#000',
+        fontWeight: '800',
+        color: '#E50914',
+    },
+    deleteBtn: {
+        padding: 8,
+        backgroundColor: 'rgba(0,0,0,0.03)',
+        borderRadius: 10,
     },
     center: {
         flex: 1,
@@ -269,11 +333,29 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: hp(10),
+    },
+    emptyIconBox: {
+        width: wp(20),
+        height: wp(20),
+        borderRadius: wp(10),
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: hp(2),
+        borderWidth: 1,
+        borderColor: '#fff',
     },
     emptyText: {
-        marginTop: 20,
-        fontSize: 18,
-        color: '#555',
+        fontSize: normalize(18),
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: hp(1),
+    },
+    emptySubText: {
+        fontSize: normalize(14),
+        color: '#888',
+        textAlign: 'center',
     },
 });
 

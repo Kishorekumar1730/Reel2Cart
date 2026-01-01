@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Image, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_BASE_URL } from '../config/apiConfig';
+import { wp, hp, normalize } from '../utils/responsive';
 
 const EditSellerProfileScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { seller } = route.params || {};
-    // Fallback: If seller object is not passed, handle gracefully (or refetch)
+    // Fallback: If seller object is not passed, handle gracefully (or refetch if needed, though usually passed)
     const sellerId = seller?._id || seller?.id;
 
     const [loading, setLoading] = useState(false);
@@ -82,195 +83,277 @@ const EditSellerProfileScreen = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <LinearGradient colors={["#1a1a1a", "#000"]} style={styles.header}>
-                <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Ionicons name="close" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Edit Shop Profile</Text>
-                    <TouchableOpacity onPress={handleSave} disabled={loading}>
-                        {loading ? <ActivityIndicator color="#E50914" /> : <Text style={styles.saveText}>Save</Text>}
-                    </TouchableOpacity>
-                </View>
-            </LinearGradient>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
+                    style={{ flex: 1 }}
+                >
+                    {/* Glassmorphic Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Edit Shop Profile</Text>
+                        <View style={{ width: 24 }} />
+                    </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+                    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* Profile Image Picker */}
-                <View style={styles.imageSection}>
-                    <TouchableOpacity onPress={pickImage} style={styles.imageWrapper}>
-                        {profileImage ? (
-                            <Image source={{ uri: profileImage }} style={styles.profileImage} />
-                        ) : (
-                            <View style={[styles.profileImage, styles.imagePlaceholder]}>
-                                <Text style={styles.initial}>{businessName?.charAt(0)}</Text>
+                        {/* Shop Logo Picker */}
+                        <View style={styles.imageSection}>
+                            <View style={styles.avatarWrapper}>
+                                {profileImage ? (
+                                    <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                                ) : (
+                                    <LinearGradient colors={['#eee', '#ddd']} style={[styles.profileImage, styles.imagePlaceholder]}>
+                                        <Text style={styles.initial}>{businessName?.charAt(0) || 'S'}</Text>
+                                    </LinearGradient>
+                                )}
+                                <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
+                                    <LinearGradient colors={['#333', '#000']} style={styles.cameraGradient}>
+                                        <Ionicons name="camera" size={normalize(18)} color="#fff" />
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             </View>
-                        )}
-                        <View style={styles.cameraIcon}>
-                            <Ionicons name="camera" size={20} color="#fff" />
+                            <Text style={styles.changePhotoText}>Change Shop Logo</Text>
                         </View>
-                    </TouchableOpacity>
-                    <Text style={styles.changePhotoText}>Change Shop Logo</Text>
-                </View>
 
-                {/* Form Fields */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Business Name</Text>
-                    <TextInput
-                        style={[styles.input, styles.disabledInput]}
-                        value={businessName}
-                        onChangeText={setBusinessName}
-                        editable={false}
-                    />
-                    <Text style={styles.helperText}>Business name cannot be changed.</Text>
-                </View>
+                        {/* Form Card */}
+                        <View style={styles.formCard}>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Business Name</Text>
+                                <TextInput
+                                    style={[styles.input, styles.disabledInput]}
+                                    value={businessName}
+                                    onChangeText={setBusinessName}
+                                    editable={false} // Often business names are locked or need approval
+                                />
+                                <Text style={styles.helperText}>Business name cannot be changed directly.</Text>
+                            </View>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Owner/Seller Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={sellerName}
-                        onChangeText={setSellerName}
-                    />
-                </View>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Owner/Seller Name</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={sellerName}
+                                    onChangeText={setSellerName}
+                                    placeholder="Enter your name"
+                                    placeholderTextColor="#999"
+                                />
+                            </View>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Phone Number</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={phone}
-                        onChangeText={setPhone}
-                        keyboardType="phone-pad"
-                    />
-                </View>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Phone Number</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    keyboardType="phone-pad"
+                                    placeholder="Enter phone number"
+                                    placeholderTextColor="#999"
+                                />
+                            </View>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Shop Description</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholder="Tell customers about your shop..."
-                        multiline
-                        textAlignVertical="top"
-                    />
-                </View>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Shop Description</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={description}
+                                    onChangeText={setDescription}
+                                    placeholder="Tell customers about your shop..."
+                                    placeholderTextColor="#999"
+                                    multiline
+                                    textAlignVertical="top"
+                                />
+                            </View>
 
-                <Text style={styles.noteText}>Note: Sensitive details like GSTIN and PAN cannot be edited directly. Please contact support.</Text>
+                            <Text style={styles.noteText}>Note: Sensitive details like GSTIN and PAN cannot be edited here.</Text>
 
-            </ScrollView>
-        </SafeAreaView>
+                            <TouchableOpacity
+                                style={styles.saveBtn}
+                                onPress={handleSave}
+                                disabled={loading}
+                            >
+                                <LinearGradient
+                                    colors={['#E50914', '#B81C26']}
+                                    style={styles.saveBtnGradient}
+                                >
+                                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
+
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
+    gradientContainer: {
+        flex: 1,
+    },
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     header: {
-        padding: 15,
-        paddingBottom: 20,
-    },
-    headerContent: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.3)',
+    },
+    backButton: {
+        padding: 5,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: normalize(18),
         fontWeight: 'bold',
-        color: '#fff',
+        color: '#333',
     },
-    saveText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#E50914',
-    },
-    content: {
-        padding: 20,
+    scrollContent: {
+        paddingBottom: hp(5),
     },
     imageSection: {
         alignItems: 'center',
-        marginBottom: 30,
+        marginTop: hp(3),
+        marginBottom: hp(3),
     },
-    imageWrapper: {
+    avatarWrapper: {
         position: 'relative',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
     },
     profileImage: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#eee',
+        width: wp(30),
+        height: wp(30),
+        borderRadius: wp(15),
+        borderWidth: 4,
+        borderColor: '#fff',
     },
     imagePlaceholder: {
-        backgroundColor: '#f5f5f5',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd',
+        backgroundColor: '#eee',
     },
     initial: {
-        fontSize: 40,
-        color: '#666',
+        fontSize: normalize(40),
+        color: '#888',
         fontWeight: 'bold',
     },
-    cameraIcon: {
+    cameraBtn: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#E50914',
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        justifyContent: 'center',
-        alignItems: 'center',
+        borderRadius: wp(5), // Circular
+        overflow: 'hidden',
         borderWidth: 2,
         borderColor: '#fff',
+        elevation: 4,
+    },
+    cameraGradient: {
+        padding: wp(2.2),
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     changePhotoText: {
-        marginTop: 10,
+        marginTop: hp(1.5),
         color: '#E50914',
         fontWeight: '600',
+        fontSize: normalize(14),
+    },
+    formCard: {
+        marginHorizontal: wp(5),
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        borderRadius: 20,
+        padding: wp(6),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 3,
     },
     formGroup: {
-        marginBottom: 20,
+        marginBottom: hp(2.5),
     },
     label: {
-        fontSize: 14,
+        fontSize: normalize(14),
         fontWeight: '600',
-        color: '#666',
-        marginBottom: 8,
+        color: '#555',
+        marginBottom: hp(1),
+        marginLeft: 4,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#eee',
-        backgroundColor: '#f9f9f9',
-        borderRadius: 10,
-        padding: 12,
-        fontSize: 16,
+        borderColor: 'rgba(0,0,0,0.1)',
+        borderRadius: 12,
+        paddingHorizontal: wp(4),
+        paddingVertical: hp(1.5),
+        fontSize: normalize(15),
         color: '#333',
-    },
-    textArea: {
-        height: 100,
-    },
-    noteText: {
-        fontSize: 12,
-        color: '#999',
-        textAlign: 'center',
-        marginTop: 20,
+        backgroundColor: '#fff',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     disabledInput: {
-        backgroundColor: '#e0e0e0',
-        color: '#888',
+        backgroundColor: '#f5f5f5',
+        color: '#999',
+    },
+    textArea: {
+        height: hp(15),
+        textAlignVertical: 'top', // For Android
     },
     helperText: {
-        fontSize: 11,
+        fontSize: normalize(11),
         color: '#999',
-        marginTop: 5,
-        marginLeft: 2
-    }
+        marginTop: 4,
+        marginLeft: 4,
+    },
+    noteText: {
+        fontSize: normalize(12),
+        color: '#888',
+        textAlign: 'center',
+        marginBottom: hp(3),
+        marginTop: hp(1),
+        paddingHorizontal: wp(2),
+    },
+    saveBtn: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: "#E50914",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 4,
+    },
+    saveBtnGradient: {
+        paddingVertical: hp(1.8),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    saveBtnText: {
+        color: '#fff',
+        fontSize: normalize(16),
+        fontWeight: 'bold',
+    },
 });
 
 export default EditSellerProfileScreen;

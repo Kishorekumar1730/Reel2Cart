@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { normalize } from '../utils/responsive';
+import { normalize, wp, hp } from '../utils/responsive';
+import { useLanguage } from '../context/LanguageContext';
 
 const NotificationSettingsScreen = ({ navigation }) => {
+    const { t } = useLanguage();
     // State for separate notification channels
     const [settings, setSettings] = useState({
         orderUpdates: true,
@@ -35,21 +38,20 @@ const NotificationSettingsScreen = ({ navigation }) => {
         setSettings(newSettings);
         try {
             await AsyncStorage.setItem('notificationSettings', JSON.stringify(newSettings));
-            // In a real app, you might sync this preference to the backend here
         } catch (e) {
             console.error(e);
         }
     };
 
-    const SettingItem = ({ title, description, value, onToggle }) => (
-        <View style={styles.itemContainer}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
+    const SettingItem = ({ title, description, value, onToggle, last }) => (
+        <View style={[styles.itemContainer, last && styles.lastItem]}>
+            <View style={{ flex: 1, paddingRight: wp(4) }}>
                 <Text style={styles.itemTitle}>{title}</Text>
                 {description && <Text style={styles.itemDescription}>{description}</Text>}
             </View>
             <Switch
-                trackColor={{ false: "#767577", true: "#E50914" }}
-                thumbColor={value ? "#fff" : "#f4f3f4"}
+                trackColor={{ false: "#ccc", true: "#E50914" }}
+                thumbColor={"#fff"}
                 ios_backgroundColor="#3e3e3e"
                 onValueChange={onToggle}
                 value={value}
@@ -58,122 +60,159 @@ const NotificationSettingsScreen = ({ navigation }) => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
-                <View style={{ width: 40 }} />
-            </View>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <Ionicons name="chevron-back" size={normalize(26)} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{t('notifications')}</Text>
+                    <View style={{ width: 30 }} />
+                </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.sectionHeader}>Order Updates</Text>
-                <SettingItem
-                    title="Order Status"
-                    description="Get updates when your order is shipped or delivered."
-                    value={settings.orderUpdates}
-                    onToggle={() => toggleSwitch('orderUpdates')}
-                />
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                <Text style={styles.sectionHeader}>Promotions & Offers</Text>
-                <SettingItem
-                    title="Discounts & Deals"
-                    description="Receive alerts about new sales and exclusive offers."
-                    value={settings.promotions}
-                    onToggle={() => toggleSwitch('promotions')}
-                />
+                    <Text style={styles.sectionHeader}>{t('orderUpdates')}</Text>
+                    <View style={styles.glassCard}>
+                        <SettingItem
+                            title={t('orderStatus')}
+                            description={t('orderStatusDesc')}
+                            value={settings.orderUpdates}
+                            onToggle={() => toggleSwitch('orderUpdates')}
+                            last
+                        />
+                    </View>
 
-                <Text style={styles.sectionHeader}>Activity</Text>
-                <SettingItem
-                    title="Account Security"
-                    description="Notify me about logins activity and password changes."
-                    value={settings.accountActivity}
-                    onToggle={() => toggleSwitch('accountActivity')}
-                />
-                <SettingItem
-                    title="Chat Messages"
-                    description="Notifications for direct messages from sellers or support."
-                    value={settings.chatMessages}
-                    onToggle={() => toggleSwitch('chatMessages')}
-                />
+                    <Text style={styles.sectionHeader}>{t('promotionsOffers')}</Text>
+                    <View style={styles.glassCard}>
+                        <SettingItem
+                            title={t('discountsDeals')}
+                            description={t('discountsDealsDesc')}
+                            value={settings.promotions}
+                            onToggle={() => toggleSwitch('promotions')}
+                            last
+                        />
+                    </View>
 
-                <View style={styles.divider} />
+                    <Text style={styles.sectionHeader}>{t('activity')}</Text>
+                    <View style={styles.glassCard}>
+                        <SettingItem
+                            title={t('accountSecurity')}
+                            description={t('accountSecurityDesc')}
+                            value={settings.accountActivity}
+                            onToggle={() => toggleSwitch('accountActivity')}
+                        />
+                        <View style={styles.divider} />
+                        <SettingItem
+                            title={t('chatMessages')}
+                            description={t('chatMessagesDesc')}
+                            value={settings.chatMessages}
+                            onToggle={() => toggleSwitch('chatMessages')}
+                            last
+                        />
+                    </View>
 
-                <Text style={styles.sectionHeader}>Email Preferences</Text>
-                <SettingItem
-                    title="Email Notifications"
-                    description="Receive the above notifications via email as well."
-                    value={settings.emailNotifications}
-                    onToggle={() => toggleSwitch('emailNotifications')}
-                />
+                    <Text style={styles.sectionHeader}>{t('emailPreferences')}</Text>
+                    <View style={styles.glassCard}>
+                        <SettingItem
+                            title={t('emailNotifications')}
+                            description={t('emailNotificationsDesc')}
+                            value={settings.emailNotifications}
+                            onToggle={() => toggleSwitch('emailNotifications')}
+                            last
+                        />
+                    </View>
 
-            </ScrollView>
-        </SafeAreaView>
+                    <View style={{ height: hp(5) }} />
+
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    gradientContainer: {
         flex: 1,
-        backgroundColor: '#fff',
+    },
+    safeArea: {
+        flex: 1,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        backgroundColor: '#fff'
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
     },
     headerTitle: {
-        fontSize: normalize(18),
-        fontWeight: 'bold',
-        color: '#333',
+        fontSize: normalize(20),
+        fontWeight: '700',
+        color: '#1a1a1a',
     },
     backBtn: {
         padding: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderRadius: 12,
     },
     scrollContent: {
-        padding: 20,
+        paddingHorizontal: wp(6),
+        paddingBottom: hp(5),
     },
     sectionHeader: {
         fontSize: normalize(14),
         fontWeight: '700',
-        color: '#666',
-        marginTop: 20,
-        marginBottom: 10,
-        textTransform: 'uppercase'
+        color: '#555',
+        marginTop: hp(2.5),
+        marginBottom: hp(1.5),
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginLeft: wp(1)
+    },
+    glassCard: {
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderRadius: 20,
+        padding: wp(4),
+        borderWidth: 1,
+        borderColor: '#fff',
+        shadowColor: "#E8DFF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 2,
     },
     itemContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f9f9f9'
+        paddingVertical: hp(1),
+    },
+    lastItem: {
+        // No bottom border or spacing if needed
     },
     itemTitle: {
         fontSize: normalize(16),
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#333',
         marginBottom: 4
     },
     itemDescription: {
         fontSize: normalize(13),
-        color: '#888',
-        lineHeight: 18
+        color: '#666',
+        lineHeight: normalize(18)
     },
     divider: {
-        height: 10,
-        backgroundColor: '#f5f5f5',
-        marginVertical: 20,
-        marginHorizontal: -20
+        height: 1,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        marginVertical: hp(1.5),
     }
 });
 

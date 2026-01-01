@@ -8,12 +8,13 @@ import { wp, hp, normalize } from "../utils/responsive";
 import { useLanguage } from "../context/LanguageContext";
 
 const languages = [
-  { label: "English", color: "#FFC1C1" },
-  { label: "தமிழ்", color: "#B0FFB0" },
-  { label: "తెలుగు", color: "#ADD8E6" },
-  { label: "हिंदी", color: "#FFE4B5" },
-  { label: "മലയാളം", color: "#D1C4E9" },
-  { label: "ಕನ್ನಡ", color: "#E1BEE7" },
+  { label: "English", sub: "English" },
+  { label: "العربية", sub: "Arabic (UAE)" },
+  { label: "தமிழ்", sub: "Tamil" },
+  { label: "తెలుగు", sub: "Telugu" },
+  { label: "हिंदी", sub: "Hindi" },
+  { label: "മലയാളം", sub: "Malayalam" },
+  { label: "ಕನ್ನಡ", sub: "Kannada" },
 ];
 
 const LanguageScreen = ({ route }) => {
@@ -40,146 +41,162 @@ const LanguageScreen = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+    <LinearGradient
+      colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+      style={styles.gradientContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-        {/* Top Section: Logo */}
-        <View style={styles.topSection}>
-          {fromSettings && (
-            <TouchableOpacity style={{ position: 'absolute', left: 0, top: 0, zIndex: 10 }} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="#000" />
-            </TouchableOpacity>
-          )}
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
 
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../assets/simple-logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+          {/* Header Section */}
+          <View style={styles.topSection}>
+            {fromSettings && (
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <Ionicons name="chevron-back" size={normalize(26)} color="#333" />
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../assets/simple-logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+
+            <Text style={styles.title}>{t('langTitle')}</Text>
+            <Text style={styles.subtitle}>{t('langSubtitle')}</Text>
           </View>
-          <Text style={styles.title}>{t('langTitle')}</Text>
-          <Text style={styles.subtitle}>{t('langSubtitle')}</Text>
-        </View>
 
-        {/* Middle Section: Grid */}
-        <View style={styles.grid}>
-          {languages.map((lang, index) => {
-            const isSelected = selectedLang?.label === lang.label;
-            return (
-              <Pressable
-                key={index}
-                style={[
-                  styles.card,
-                  { backgroundColor: lang.color },
-                  isSelected && styles.cardSelected,
-                ]}
-                onPress={() => setSelectedLang(lang)}
-              >
-                <Ionicons
-                  name="play-circle"
-                  size={24}
-                  color="rgba(0,0,0,0.15)"
-                  style={styles.cardIcon}
-                />
-
-                <Text style={[
-                  styles.languageText,
-                  isSelected && styles.languageTextSelected
-                ]}>{lang.label}</Text>
-
-                {isSelected && (
-                  <View style={styles.checkmark}>
-                    <Ionicons name="checkmark" size={14} color="#fff" />
+          {/* Language Grid */}
+          <View style={styles.grid}>
+            {languages.map((lang, index) => {
+              const isSelected = selectedLang?.label === lang.label;
+              return (
+                <Pressable
+                  key={index}
+                  style={[
+                    styles.card,
+                    isSelected && styles.cardSelected,
+                  ]}
+                  onPress={() => setSelectedLang(lang)}
+                >
+                  <View style={styles.cardContent}>
+                    <Text style={[
+                      styles.languageText,
+                      isSelected && styles.languageTextSelected
+                    ]}>{lang.label}</Text>
+                    <Text style={[
+                      styles.subText,
+                      isSelected && styles.subTextSelected
+                    ]}>{lang.sub}</Text>
                   </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
 
-        {/* Bottom Section: Continue */}
-        <View style={styles.bottomSection}>
+                  {/* Minimal Radio Indicator */}
+                  <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                    {isSelected && <View style={styles.radioInner} />}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+        </ScrollView>
+
+        {/* Bottom Button Area */}
+        <View style={styles.bottomContainer}>
           <TouchableOpacity
-            activeOpacity={0.8}
-            style={[styles.continueWrapper, !selectedLang && styles.disabledButton]}
+            activeOpacity={0.9}
+            style={[styles.continueButtonShadow, !selectedLang && styles.disabledShadow]}
             disabled={!selectedLang}
             onPress={handleContinue}
           >
-            {selectedLang ? (
-              <LinearGradient
-                colors={['#E50914', '#B20710']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradientButton}
-              >
-                <Text style={styles.continueText}>
-                  {fromSettings ? t('save') : t('continue')}
-                </Text>
-              </LinearGradient>
-            ) : (
-              <View style={styles.placeholderButton}>
-                <Text style={styles.placeholderButtonText}>{t('selectLang')}</Text>
-              </View>
-            )}
+            <LinearGradient
+              colors={selectedLang ? ['#E50914', '#B20710'] : ['#E0E0E0', '#F5F5F5']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              <Text style={[styles.continueText, !selectedLang && { color: '#AAA' }]}>
+                {fromSettings ? t('save') : t('continue')}
+              </Text>
+              {selectedLang && <Ionicons name="arrow-forward" size={normalize(20)} color="#fff" style={{ marginLeft: 8 }} />}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 export default LanguageScreen;
 
 const styles = StyleSheet.create({
+  gradientContainer: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   scrollContainer: {
-    paddingVertical: hp(4),
+    paddingTop: hp(4),
     paddingHorizontal: wp(6),
+    paddingBottom: hp(15),
     alignItems: "center",
-    flexGrow: 1,
   },
 
-  // Header / Logo
+  // Header
   topSection: {
     alignItems: 'center',
-    marginBottom: hp(4),
-    marginTop: hp(2),
+    marginBottom: hp(5),
+    width: '100%',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    zIndex: 10,
+    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: 15,
   },
   logoContainer: {
     width: wp(28),
     height: wp(28),
-    borderRadius: wp(28) / 2,
+    borderRadius: wp(14),
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "#000",
+    marginBottom: hp(3),
+    shadowColor: "#E8DFF5",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 4,
-    marginBottom: hp(2),
   },
   logo: {
-    width: '95%',
-    height: '95%',
+    width: '70%',
+    height: '70%',
   },
   title: {
-    fontSize: normalize(22),
-    fontWeight: "700",
-    color: '#000',
+    fontSize: normalize(26),
+    fontWeight: "800",
+    color: '#1a1a1a',
     textAlign: "center",
-    marginBottom: hp(0.5),
+    marginBottom: hp(1),
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: normalize(14),
-    color: '#444',
+    fontSize: normalize(15),
+    color: '#666',
     textAlign: "center",
-    paddingHorizontal: wp(4),
+    lineHeight: normalize(26),
+    maxWidth: '85%',
   },
 
   // Grid
@@ -188,100 +205,111 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: hp(4),
   },
   card: {
-    width: wp(42),
-    height: hp(12),
-    borderRadius: 16,
-    marginBottom: hp(2),
+    width: '48%',
+    minHeight: hp(16),
+    paddingVertical: hp(2),
+    borderRadius: 24,
+    marginBottom: hp(2.5),
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
-    overflow: 'hidden',
-    borderWidth: 1, // Added for visibility
-    borderColor: 'rgba(0,0,0,0.1)', // Subtle border
-  },
-  cardIcon: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 0, // No border implies clean minimal look
+    shadowColor: "#E8DFF5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2, // Subtle shadow for lift
+    shadowRadius: 10,
+    elevation: 1,
   },
   cardSelected: {
-    borderWidth: 2.5,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
     borderColor: '#E50914',
-    transform: [{ scale: 1.02 }],
+    shadowColor: "#E50914",
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+    elevation: 4,
+  },
+  cardContent: {
+    alignItems: 'center',
+    marginTop: -10,
   },
   languageText: {
-    fontSize: normalize(18),
+    fontSize: normalize(20),
     fontWeight: "700",
-    color: '#000',
-    zIndex: 1,
-    letterSpacing: 0.5,
+    color: '#333',
+    marginBottom: 6,
   },
   languageTextSelected: {
-    fontSize: normalize(19),
-    fontWeight: "800",
+    color: '#E50914',
   },
-  checkmark: {
+  subText: {
+    fontSize: normalize(12),
+    color: '#999',
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  subTextSelected: {
+    color: '#E50914',
+    opacity: 0.8,
+  },
+
+  // Radio
+  radioOuter: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: 15,
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#E50914',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)', // Extremely subtle ring for layout
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  radioOuterSelected: {
+    borderColor: '#E50914',
+    backgroundColor: '#fff',
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#E50914',
   },
 
-  // Continue Button
-  bottomSection: {
-    width: '100%',
-    marginBottom: hp(2),
+  // Bottom Area
+  bottomContainer: {
+    position: 'absolute',
+    bottom: hp(5),
+    left: wp(6),
+    right: wp(6),
   },
-  continueWrapper: {
+  continueButtonShadow: {
     width: '100%',
     borderRadius: 30,
-    shadowColor: '#d32f2f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowColor: '#E50914',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  disabledButton: {
+  disabledShadow: {
     shadowOpacity: 0,
     elevation: 0,
   },
   gradientButton: {
-    paddingVertical: 16,
+    paddingVertical: hp(2.2),
     borderRadius: 30,
+    flexDirection: 'row',
     alignItems: "center",
     justifyContent: 'center',
-  },
-  placeholderButton: {
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: 'center',
-    backgroundColor: '#f0f0f0',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  placeholderButtonText: {
-    color: '#888',
-    fontSize: normalize(16),
-    fontWeight: '700',
   },
   continueText: {
     color: "#fff",
-    fontSize: normalize(17),
+    fontSize: normalize(18),
     fontWeight: "bold",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
 });

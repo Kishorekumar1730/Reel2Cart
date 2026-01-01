@@ -1,10 +1,44 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Image, FlatList, TouchableOpacity, Dimensions, Platform, StatusBar, ActivityIndicator, RefreshControl, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Image, FlatList, TouchableOpacity, Dimensions, Platform, StatusBar, ActivityIndicator, RefreshControl, Modal, Animated, LayoutAnimation, UIManager } from 'react-native';
+
+import { wp, hp, normalize } from '../utils/responsive';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental && !global.nativeFabricUIManager) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const FadeInView = ({ delay = 0, style, children }) => {
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const translateY = React.useRef(new Animated.Value(30)).current;
+
+    React.useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                delay: delay,
+                useNativeDriver: true,
+            }),
+            Animated.timing(translateY, {
+                toValue: 0,
+                duration: 600,
+                delay: delay,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [delay]);
+
+    return (
+        <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY }] }, style]}>
+            {children}
+        </Animated.View>
+    );
+};
 import AnimatedButton from '../components/AnimatedButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, Feather } from '@expo/vector-icons';
-import { wp, hp, normalize, isTablet } from '../utils/responsive';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { isTablet } from '../utils/responsive';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
@@ -79,13 +113,122 @@ const ALL_COUNTRIES = [
 ];
 
 const CATEGORIES = [
-    { id: 0, key: 'All', icon: 'grid-outline' },
-    { id: 1, key: 'Fashion', icon: 'shirt-outline' },
-    { id: 2, key: 'Electronics', icon: 'phone-portrait-outline' },
-    { id: 3, key: 'Home', icon: 'home-outline' },
-    { id: 4, key: 'Beauty', icon: 'rose-outline' },
-    { id: 5, key: 'Sports', icon: 'football-outline' },
+    { id: 0, key: 'all', icon: 'grid-outline' },
+    { id: 1, key: 'catFashion', icon: 'shirt-outline' },
+    { id: 2, key: 'catElectronics', icon: 'phone-portrait-outline' },
+    { id: 3, key: 'catHome', icon: 'home-outline' },
+    { id: 4, key: 'catBeauty', icon: 'lipstick', type: 'MaterialCommunityIcons' },
+    { id: 5, key: 'catSports', icon: 'football-outline' },
 ];
+
+const SkeletonItem = ({ style }) => {
+    const animatedValue = React.useRef(new Animated.Value(0)).current;
+
+    React.useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(animatedValue, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                Animated.timing(animatedValue, { toValue: 0, duration: 1000, useNativeDriver: true })
+            ])
+        ).start();
+    }, []);
+
+    const opacity = animatedValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.3, 0.7]
+    });
+
+    return <Animated.View style={[{ backgroundColor: '#ccc', opacity, borderRadius: 4 }, style]} />;
+};
+
+const ProductCard = React.memo(({ item, index, navigation, toggleWishlist, isWishlisted, formatPrice, addToCart }) => {
+    const scaleValue = React.useRef(new Animated.Value(1)).current;
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+    const translateY = React.useRef(new Animated.Value(50)).current;
+
+    React.useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 500,
+                delay: index * 50, // Fast stagger
+                useNativeDriver: true
+            }),
+            Animated.timing(translateY, {
+                toValue: 0,
+                duration: 500,
+                delay: index * 50,
+                useNativeDriver: true
+            })
+        ]).start();
+    }, []);
+
+    const onHeartPress = () => {
+        Animated.sequence([
+            Animated.spring(scaleValue, { toValue: 1.3, useNativeDriver: true, speed: 60, bounciness: 10 }),
+            Animated.spring(scaleValue, { toValue: 1, useNativeDriver: true, speed: 60, bounciness: 10 })
+        ]).start();
+        toggleWishlist(item);
+    };
+
+    const hasMultipleImages = item.images && item.images.length > 1;
+
+    return (
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+            <AnimatedButton style={styles.productCard} onPress={() => navigation.navigate('ProductDetails', { product: item })}>
+                <View style={styles.productImageContainer}>
+                    {hasMultipleImages ? (
+                        <ScrollView
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            nestedScrollEnabled={true}
+                        >
+                            {item.images.map((img, index) => (
+                                <Image
+                                    key={index}
+                                    source={{ uri: img }}
+                                    style={{ width: wp(47), height: '100%', resizeMode: 'contain' }}
+                                />
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <Image source={{ uri: item.images?.[0] }} style={styles.productImage} />
+                    )}
+
+                    {hasMultipleImages && (
+                        <View style={{ position: 'absolute', bottom: 5, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                            <Text style={{ color: '#fff', fontSize: 10 }}>{t('slideView')}</Text>
+                        </View>
+                    )}
+
+                    <TouchableOpacity style={styles.productHeartIcon} onPress={onHeartPress}>
+                        <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+                            <Ionicons
+                                name={isWishlisted ? "heart" : "heart-outline"}
+                                size={20}
+                                color={isWishlisted ? "#E50914" : "#555"}
+                            />
+                        </Animated.View>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.productDetails}>
+                    <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+                    <View style={styles.ratingContainer}>
+                        <Ionicons name="star" size={12} color="#FFA41C" />
+                        <Text style={styles.ratingText}>{item.rating || '4.5'} ({item.reviews || 0})</Text>
+                    </View>
+                    <View style={styles.priceRow}>
+                        <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
+                        <AnimatedButton style={styles.addToCartBtn} onPress={() => addToCart(item)}>
+                            <Ionicons name="add" size={20} color="#fff" />
+                        </AnimatedButton>
+                    </View>
+                </View>
+            </AnimatedButton>
+        </Animated.View>
+    );
+});
 
 const HomeScreen = ({ navigation }) => {
     const { t } = useLanguage();
@@ -96,7 +239,7 @@ const HomeScreen = ({ navigation }) => {
     const [reels, setReels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [activeCategory, setActiveCategory] = useState('All');
+    const [activeCategory, setActiveCategory] = useState('all');
 
     // Search State
     const [searchResults, setSearchResults] = useState([]);
@@ -130,7 +273,7 @@ const HomeScreen = ({ navigation }) => {
     };
 
     // Fetch Data
-    const fetchData = async (category = 'All') => {
+    const fetchData = async (category = 'all') => {
         if (!refreshing) setLoading(true);
 
         try {
@@ -142,12 +285,12 @@ const HomeScreen = ({ navigation }) => {
             // Here my country.code is 'IN' for India.
             // So I MUST pass country.name (e.g. 'India').
             // Exception: For Global, my object is { code: 'Global', name: 'Global Store' }.
-            // Strict check: if code is 'Global', use 'Global'. Else use country.name.
+            // Strict check: if code is 'Global', use 'Global'. Else use region.name.
             // Strict check: if code is 'Global', use 'Global'. Else use region.name.
             const countryFilter = region.code === 'Global' ? 'Global' : region.name;
 
             let prodUrl = `${API_BASE_URL}/products?country=${countryFilter}`;
-            if (category !== 'All') prodUrl += `&category=${category}`;
+            if (category !== 'all') prodUrl += `&category=${category}`;
             prodUrl += '&limit=20';
 
             const [prodRes, offerRes, reelRes] = await Promise.all([
@@ -178,11 +321,14 @@ const HomeScreen = ({ navigation }) => {
     }, [activeCategory]);
 
     const handleCategorySelect = (cat) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setActiveCategory(cat.key);
     };
 
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [userId, setUserId] = useState(null);
+
+    const [cartIds, setCartIds] = useState(new Set());
 
     // Fetch Wishlist
     const fetchWishlist = async (uid) => {
@@ -196,6 +342,17 @@ const HomeScreen = ({ navigation }) => {
         } catch (e) {
             console.error("Wishlist Fetch Error", e);
         }
+    };
+
+    const checkCart = async (uid) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/cart/${uid}`);
+            const data = await res.json();
+            if (res.ok && data.cartItems) {
+                const ids = new Set(data.cartItems.map(item => item.productId || item._id));
+                setCartIds(ids);
+            }
+        } catch (e) { console.error(e); }
     };
 
     // Real-time Search Logic
@@ -321,6 +478,7 @@ const HomeScreen = ({ navigation }) => {
                     setUserId(user._id);
                     fetchAddress();
                     fetchWishlist(user._id);
+                    checkCart(user._id);
                 }
                 // TRIGGER DATA FETCH WHEN SCREEN IS FOCUSED OR COUNTRY CHANGES
                 fetchData(activeCategory);
@@ -394,6 +552,14 @@ const HomeScreen = ({ navigation }) => {
                 alert("Please login to add to cart");
                 return;
             }
+
+            if (cartIds.has(product._id)) {
+                // Using React Native Alert for consistency with ProductDetailsScreen
+                const { Alert } = require('react-native');
+                Alert.alert(t('alreadyInCart'), t('itemAlreadyInCart'));
+                return;
+            }
+
             const user = JSON.parse(storedUserInfo);
 
             const payload = {
@@ -414,7 +580,9 @@ const HomeScreen = ({ navigation }) => {
             });
 
             if (response.ok) {
-                // Maybe simple toast or vibration here
+                const { Alert } = require('react-native');
+                Alert.alert(t('success'), t('addedToCartSuccess'));
+                setCartIds(new Set(cartIds).add(product._id)); // Optimistically update
             }
         } catch (error) {
             console.error(error);
@@ -427,40 +595,64 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => handleCategorySelect(item)}
         >
             <View style={[styles.categoryIconContainer, activeCategory === item.key && { backgroundColor: '#E50914' }]}>
-                <Ionicons name={item.icon} size={24} color={activeCategory === item.key ? "#fff" : "#333"} />
+                {item.type === 'MaterialCommunityIcons' ? (
+                    <MaterialCommunityIcons name={item.icon} size={24} color={activeCategory === item.key ? "#fff" : "#333"} />
+                ) : (
+                    <Ionicons name={item.icon} size={24} color={activeCategory === item.key ? "#fff" : "#333"} />
+                )}
             </View>
             <Text style={[styles.categoryName, activeCategory === item.key && { fontWeight: 'bold', color: '#E50914' }]}>
-                {item.key}
+                {t(item.key)}
             </Text>
         </AnimatedButton>
     );
 
     const renderBanner = ({ item }) => (
-        <AnimatedButton style={styles.bannerContainer}>
-            <Image
-                source={{ uri: item.imageUrl || item.images?.[0] }}
-                style={styles.bannerImage}
-                resizeMode="cover"
-            />
-            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.bannerGradient} />
-            <View style={styles.bannerTextContainer}>
-                <View style={[styles.dealBadge, { backgroundColor: item.couponCode ? '#4CAF50' : '#CC0C39' }]}>
-                    <Text style={styles.dealText}>
-                        {item.couponCode ? `CODE: ${item.couponCode}` : 'DEAL OF THE DAY'}
+        <View style={styles.bannerContainer}>
+            <AnimatedButton style={styles.bannerCard} scaleTo={0.98}>
+                <Image
+                    source={{ uri: item.imageUrl || item.images?.[0] }}
+                    style={styles.bannerImage}
+                    resizeMode="cover"
+                />
+                <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.9)']}
+                    style={styles.bannerGradient}
+                />
+
+                <View style={styles.bannerTextContainer}>
+                    <View style={styles.premiumBadge}>
+                        <Text style={styles.premiumBadgeText}>
+                            {item.couponCode ? `CODE: ${item.couponCode}` : t('limitedOffer')}
+                        </Text>
+                    </View>
+
+                    <Text style={styles.bannerTitle} numberOfLines={2}>
+                        {item.title || item.name}
                     </Text>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                        {item.discountPercentage ? (
+                            <Text style={styles.discountText}>{item.discountPercentage}% OFF</Text>
+                        ) : (
+                            item.price && <Text style={styles.bannerPrice}>{formatPrice(item.price)}</Text>
+                        )}
+                        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.7)', marginHorizontal: 8 }} />
+                        <Text style={styles.timeText}>{t('expiresMidnight')}</Text>
+                    </View>
                 </View>
-                <Text style={styles.bannerTitle} numberOfLines={1}>{item.title || item.name}</Text>
-                {item.discountPercentage ? (
-                    <Text style={styles.bannerPrice}>{item.discountPercentage}% OFF</Text>
-                ) : (
-                    item.price && <Text style={styles.bannerPrice}>{formatPrice(item.price)}</Text>
-                )}
-            </View>
-        </AnimatedButton>
+            </AnimatedButton>
+        </View>
     );
 
-    const renderVideoCard = ({ item }) => (
-        <AnimatedButton style={styles.videoCard} onPress={() => navigation.navigate('Reels')}>
+    const renderVideoCard = ({ item, index }) => (
+        <AnimatedButton
+            style={styles.videoCard}
+            onPress={() => navigation.push('ReelsScreen', {
+                initialReels: reels, // Pass the full list so user can scroll
+                initialIndex: index  // Start exactly at this video
+            })}
+        >
             <Image
                 source={{ uri: item.images[0] }} // Using product image as thumb for now if no dedicated thumb
                 style={styles.videoThumb}
@@ -473,210 +665,219 @@ const HomeScreen = ({ navigation }) => {
         </AnimatedButton>
     );
 
-    const renderProduct = ({ item }) => {
-        const hasMultipleImages = item.images && item.images.length > 1;
+    const renderProduct = ({ item, index }) => {
         const isWishlisted = wishlistIds.has(item._id);
-
         return (
-            <AnimatedButton style={styles.productCard} onPress={() => navigation.navigate('ProductDetails', { product: item })}>
-                <View style={styles.productImageContainer}>
-                    {hasMultipleImages ? (
-                        <ScrollView
-                            horizontal
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            nestedScrollEnabled={true}
-                        >
-                            {item.images.map((img, index) => (
-                                <Image
-                                    key={index}
-                                    source={{ uri: img }}
-                                    style={{ width: wp(47), height: '100%', resizeMode: 'contain' }}
-                                />
-                            ))}
-                        </ScrollView>
-                    ) : (
-                        <Image source={{ uri: item.images?.[0] }} style={styles.productImage} />
-                    )}
-
-                    {hasMultipleImages && (
-                        <View style={{ position: 'absolute', bottom: 5, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                            <Text style={{ color: '#fff', fontSize: 10 }}>Slide to view</Text>
-                        </View>
-                    )}
-
-                    <AnimatedButton style={styles.productHeartIcon} onPress={() => toggleWishlist(item)}>
-                        <Ionicons
-                            name={isWishlisted ? "heart" : "heart-outline"}
-                            size={20}
-                            color={isWishlisted ? "#E50914" : "#555"}
-                        />
-                    </AnimatedButton>
-                </View>
-                <View style={styles.productDetails}>
-                    <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-                    <View style={styles.ratingContainer}>
-                        <Ionicons name="star" size={12} color="#FFA41C" />
-                        <Text style={styles.ratingText}>{item.rating || '4.5'} ({item.reviews || 0})</Text>
-                    </View>
-                    <View style={styles.priceRow}>
-                        <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
-                        <AnimatedButton style={styles.addToCartBtn} onPress={() => addToCart(item)}>
-                            <Ionicons name="add" size={20} color="#fff" />
-                        </AnimatedButton>
-                    </View>
-                </View>
-            </AnimatedButton>
+            <ProductCard
+                item={item}
+                index={index}
+                navigation={navigation}
+                toggleWishlist={toggleWishlist}
+                isWishlisted={isWishlisted}
+                formatPrice={formatPrice}
+                addToCart={addToCart}
+            />
         );
     };
 
+    // AI FAB Animation
+    const pulseAnim = React.useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.08, // Softer pulse
+                    duration: 1500, // Slower breath
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1500,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, []);
+
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-            <StatusBar barStyle="light-content" backgroundColor="#131921" />
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={{ flex: 1 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+                <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
-            {/* Header */}
-            {/* Header with Search */}
-            {/* Header with Search & Region */}
-            {/* Header with Search & Region */}
-            <LinearGradient colors={['#131921', '#232f3e']} style={styles.header}>
-                <View style={styles.searchRow}>
+                {/* Header with Search & Region */}
+                <View style={styles.header}>
+                    <View style={styles.searchRow}>
 
-                    {/* Search Bar */}
-                    <View style={styles.searchBar}>
-                        <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
-                        <TextInput
-                            placeholder={t('searchPlaceholder')}
-                            style={styles.searchInput}
-                            value={search}
-                            onChangeText={setSearch}
-                            placeholderTextColor="#999"
-                            autoCorrect={false}
-                        />
-                        {search.length > 0 ? (
-                            <TouchableOpacity onPress={clearSearch}>
-                                <Ionicons name="close-circle" size={20} color="#999" />
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity onPress={handleVisualSearch}>
-                                <Ionicons name="camera-outline" size={22} color="#666" />
-                            </TouchableOpacity>
-                        )}
+                        {/* Search Bar */}
+                        <View style={styles.searchBar}>
+                            <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
+                            <TextInput
+                                placeholder={t('searchPlaceholder')}
+                                style={styles.searchInput}
+                                value={search}
+                                onChangeText={setSearch}
+                                placeholderTextColor="#999"
+                                autoCorrect={false}
+                            />
+                            {search.length > 0 ? (
+                                <TouchableOpacity onPress={clearSearch}>
+                                    <Ionicons name="close-circle" size={20} color="#999" />
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity onPress={handleVisualSearch}>
+                                    <Ionicons name="camera-outline" size={22} color="#666" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {/* Region Selector (Right Side) */}
+                        <TouchableOpacity style={styles.regionSelector} onPress={() => setIsCountryModalVisible(true)}>
+                            <Text style={{ fontSize: 18 }}>{region.flag}</Text>
+                            <Text style={{ fontSize: 12, color: '#333', fontWeight: 'bold', marginHorizontal: 2 }}>
+                                {region.code === 'Global' ? 'GL' : region.code}
+                            </Text>
+                            <Ionicons name="caret-down" size={10} color="#555" />
+                        </TouchableOpacity>
+
                     </View>
+                </View>
 
-                    {/* Region Selector (Right Side) */}
-                    <TouchableOpacity style={styles.regionSelector} onPress={() => setIsCountryModalVisible(true)}>
-                        <Text style={{ fontSize: 18 }}>{region.flag}</Text>
-                        <Text style={{ fontSize: 12, color: '#fff', fontWeight: 'bold', marginHorizontal: 2 }}>
-                            {region.code === 'Global' ? 'GL' : region.code}
+                {/* Address Bar (Separate) */}
+                <AnimatedButton style={styles.addressBar} onPress={() => navigation.navigate("Address")}>
+                    <Ionicons name="location-outline" size={18} color="#333" />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.addressText} numberOfLines={1}>
+                            {selectedAddress
+                                ? `${t('deliverTo')} ${selectedAddress.name} - ${selectedAddress.city} ${selectedAddress.postalCode}`
+                                : t('selectLocationAvailability')
+                            }
                         </Text>
-                        <Ionicons name="caret-down" size={10} color="#ccc" />
-                    </TouchableOpacity>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#333" />
+                </AnimatedButton>
 
-                </View>
-            </LinearGradient>
+                <FlatList
+                    data={isSearching ? searchResults : products}
+                    keyExtractor={(item) => item._id}
+                    key={isSearching ? 'search-list' : 'home-list'} // Force re-render on mode switch
+                    numColumns={2}
+                    columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: wp(2) }}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 
-            {/* Address Bar (Separate) */}
-            <AnimatedButton style={styles.addressBar} onPress={() => navigation.navigate("Address")}>
-                <Ionicons name="location-outline" size={18} color="#333" />
-                <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.addressText} numberOfLines={1}>
-                        {selectedAddress
-                            ? `Deliver to ${selectedAddress.name} - ${selectedAddress.city} ${selectedAddress.postalCode}`
-                            : "Select a location to see local availability"
-                        }
-                    </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#333" />
-            </AnimatedButton>
+                    // HEADER: Categories, Banners, Reels, Section Titles
+                    ListHeaderComponent={
+                        <View>
+                            {/* Categories */}
+                            <FadeInView delay={0}>
+                                <View style={styles.sectionContainer}>
+                                    <FlatList
+                                        data={CATEGORIES}
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        renderItem={renderCategory}
+                                        keyExtractor={item => item.id.toString()}
+                                        contentContainerStyle={{ paddingHorizontal: wp(2) }}
+                                    />
+                                </View>
+                            </FadeInView>
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
+                            {/* Search Header Text */}
+                            {isSearching && (
+                                <FadeInView delay={100} style={{ paddingHorizontal: wp(4), marginTop: 10 }}>
+                                    <Text style={styles.sectionHeader}>
+                                        {searchLoading ? t('searching') : `${t('resultsFor').replace('{query}', search)}`}
+                                    </Text>
+                                    {searchLoading && <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 20 }} />}
+                                </FadeInView>
+                            )}
 
-                {/* Categories */}
-                <View style={styles.sectionContainer}>
-                    <FlatList
-                        data={CATEGORIES}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        renderItem={renderCategory}
-                        keyExtractor={item => item.id.toString()}
-                        contentContainerStyle={{ paddingHorizontal: wp(2) }}
-                    />
-                </View>
+                            {/* Normal Home Headers (Banners, Reels) */}
+                            {!isSearching && (
+                                <>
+                                    {/* Featured Banner */}
+                                    {featured.length > 0 && (
+                                        <FadeInView delay={200}>
+                                            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.bannerScroll}>
+                                                {featured.map((item) => (
+                                                    <View key={item._id} style={{ width }}>
+                                                        {renderBanner({ item })}
+                                                    </View>
+                                                ))}
+                                            </ScrollView>
+                                        </FadeInView>
+                                    )}
 
-                {/* Content Logic: Searching vs Normal Home */}
-                {isSearching ? (
-                    <View style={styles.searchResultsContainer}>
-                        <Text style={styles.sectionHeader}>
-                            {searchLoading ? 'Searching...' : `Results for "${search}"`}
-                        </Text>
+                                    {/* Reels / Trendz */}
+                                    {reels.length > 0 && (
+                                        <FadeInView delay={300}>
+                                            <View style={styles.sectionHeader}>
+                                                <Text style={styles.sectionTitle}>{t('shopflixTrendz')}</Text>
+                                                <AnimatedButton onPress={() => navigation.push('ReelsScreen')}>
+                                                    <Text style={styles.seeAll}>{t('seeAll')}</Text>
+                                                </AnimatedButton>
+                                            </View>
+                                            <FlatList
+                                                data={reels}
+                                                horizontal
+                                                showsHorizontalScrollIndicator={false}
+                                                renderItem={renderVideoCard}
+                                                keyExtractor={item => item._id}
+                                                contentContainerStyle={{ paddingHorizontal: wp(4) }}
+                                            />
+                                        </FadeInView>
+                                    )}
 
-                        {searchLoading ? (
-                            <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 20 }} />
-                        ) : (
-                            searchResults.length === 0 ? (
+                                    {/* Recommended Section Title */}
+                                    <View style={styles.sectionHeader}>
+                                        <Text style={styles.sectionTitle}>
+                                            {activeCategory === 'all' ? t('recommended') : t(activeCategory)}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    }
+
+                    // RENDER ITEM (Product)
+                    renderItem={({ item, index }) => {
+                        // Don't render items if search is loading (header handles spinner)
+                        if (isSearching && searchLoading) return null;
+                        return renderProduct({ item, index });
+                    }}
+
+                    // EMPTY STATE
+                    ListEmptyComponent={
+                        isSearching ? (
+                            !searchLoading && (
                                 <View style={styles.noResults}>
                                     <Ionicons name="search-outline" size={48} color="#ccc" />
                                     <Text style={styles.emptyText}>No products found matching "{search}"</Text>
                                     <Text style={styles.subEmptyText}>Try checking your spelling or use different keywords.</Text>
                                 </View>
-                            ) : (
-                                <View style={styles.productGrid}>
-                                    {searchResults.map((item) => (
-                                        <View key={item._id}>{renderProduct({ item })}</View>
-                                    ))}
-                                </View>
                             )
-                        )}
-                    </View>
-                ) : (
-                    /* Normal Home Content */
-                    loading && products.length === 0 ? (
-                        <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 50 }} />
-                    ) : (
-                        <>
-                            {/* Featured Banner */}
-                            {featured.length > 0 && (
-                                <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.bannerScroll}>
-                                    {featured.map((item) => (
-                                        <View key={item._id} style={{ width }}>
-                                            {renderBanner({ item })}
+                        ) : (
+                            // Normal Home Empty State
+                            loading ? (
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: wp(2) }}>
+                                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                                        <View key={i} style={[styles.productCard, { backgroundColor: '#fff', elevation: 0 }]}>
+                                            <SkeletonItem style={{ width: '100%', height: isTablet() ? wp(30) : wp(45), marginBottom: 8 }} />
+                                            <View style={{ paddingHorizontal: 5 }}>
+                                                <SkeletonItem style={{ width: '90%', height: 15, marginBottom: 5 }} />
+                                                <SkeletonItem style={{ width: '60%', height: 15 }} />
+                                            </View>
                                         </View>
                                     ))}
-                                </ScrollView>
-                            )}
-
-                            {/* Reels / Trendz */}
-                            {reels.length > 0 && (
-                                <>
-                                    <View style={styles.sectionHeader}>
-                                        <Text style={styles.sectionTitle}>Reel2Cart Trendz</Text>
-                                        <AnimatedButton onPress={() => navigation.navigate('Reels')}>
-                                            <Text style={styles.seeAll}>Watch All</Text>
-                                        </AnimatedButton>
-                                    </View>
-                                    <FlatList
-                                        data={reels}
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        renderItem={renderVideoCard}
-                                        keyExtractor={item => item._id}
-                                        contentContainerStyle={{ paddingHorizontal: wp(4) }}
-                                    />
-                                </>
-                            )}
-
-                            {/* Recommended Products Grid */}
-                            <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>
-                                    {activeCategory === 'All' ? 'Recommended for You' : `${activeCategory} Products`}
-                                </Text>
-                            </View>
-
-                            {products.length === 0 ? (
+                                </View>
+                            ) : (
                                 <View style={styles.emptyContainer}>
                                     <Image
                                         source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4076/4076432.png' }}
@@ -693,81 +894,77 @@ const HomeScreen = ({ navigation }) => {
                                         <Text style={styles.globalButtonText}>Switch to Global Store 🌍</Text>
                                     </TouchableOpacity>
                                 </View>
-                            ) : (
-                                <View style={styles.productGrid}>
-                                    {products.map((item) => (
-                                        <View key={item._id}>{renderProduct({ item })}</View>
-                                    ))}
-                                </View>
-                            )}
-                        </>
-                    )
-                )}
+                            )
+                        )
+                    }
+                />
 
-            </ScrollView>
+                {/* Country Selector Modal */}
+                <Modal
+                    visible={isCountryModalVisible}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setIsCountryModalVisible(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Region</Text>
+                                <TouchableOpacity onPress={() => setIsCountryModalVisible(false)}>
+                                    <Ionicons name="close" size={24} color="#333" />
+                                </TouchableOpacity>
+                            </View>
 
-            {/* Country Selector Modal */}
-            <Modal
-                visible={isCountryModalVisible}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setIsCountryModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Region</Text>
-                            <TouchableOpacity onPress={() => setIsCountryModalVisible(false)}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
+                            {/* Country Search Bar */}
+                            <View style={styles.countrySearchContainer}>
+                                <Ionicons name="search" size={20} color="#999" style={{ marginRight: 8 }} />
+                                <TextInput
+                                    placeholder="Search Country..."
+                                    style={styles.countrySearchInput}
+                                    value={countrySearch}
+                                    onChangeText={setCountrySearch}
+                                    autoCorrect={false}
+                                />
+                            </View>
 
-                        {/* Country Search Bar */}
-                        <View style={styles.countrySearchContainer}>
-                            <Ionicons name="search" size={20} color="#999" style={{ marginRight: 8 }} />
-                            <TextInput
-                                placeholder="Search Country..."
-                                style={styles.countrySearchInput}
-                                value={countrySearch}
-                                onChangeText={setCountrySearch}
-                                autoCorrect={false}
+                            <FlatList
+                                data={filteredCountries}
+                                keyExtractor={item => item.code}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[styles.countryItem, region.code === item.code && styles.selectedCountry]}
+                                        onPress={() => handleCountrySelect(item)}
+                                    >
+                                        <Text style={styles.countryFlag}>{item.flag}</Text>
+                                        <Text style={[styles.countryName, region.code === item.code && { fontWeight: 'bold', color: '#E50914' }]}>
+                                            {item.name}
+                                        </Text>
+                                        {region.code === item.code && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                                    </TouchableOpacity>
+                                )}
                             />
                         </View>
-
-                        <FlatList
-                            data={filteredCountries}
-                            keyExtractor={item => item.code}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[styles.countryItem, region.code === item.code && styles.selectedCountry]}
-                                    onPress={() => handleCountrySelect(item)}
-                                >
-                                    <Text style={styles.countryFlag}>{item.flag}</Text>
-                                    <Text style={[styles.countryName, region.code === item.code && { fontWeight: 'bold', color: '#E50914' }]}>
-                                        {item.name}
-                                    </Text>
-                                    {region.code === item.code && <Ionicons name="checkmark" size={20} color="#E50914" />}
-                                </TouchableOpacity>
-                            )}
-                        />
                     </View>
-                </View>
-            </Modal>
-            {/* AI Assistant FAB */}
-            <TouchableOpacity
-                style={styles.aiFab}
-                onPress={() => navigation.navigate('AIChat')}
-                activeOpacity={0.8}
-            >
-                <LinearGradient
-                    colors={['#E50914', '#b81c26']}
-                    style={styles.aiFabGradient}
-                >
-                    <Ionicons name="sparkles" size={24} color="#fff" />
-                </LinearGradient>
-            </TouchableOpacity>
+                </Modal>
 
-        </SafeAreaView>
+                {/* AI Assistant FAB with Pulse Animation */}
+                <Animated.View style={[styles.aiFabContainer, { transform: [{ scale: pulseAnim }] }]}>
+                    <TouchableOpacity
+                        style={styles.aiFab}
+                        onPress={() => navigation.navigate('AIChat')}
+                        activeOpacity={0.9}
+                    >
+                        <LinearGradient
+                            colors={['#FF512F', '#DD2476']} // Elegant Sunset Red-Pink
+                            style={styles.aiFabGradient}
+                        >
+                            <MaterialCommunityIcons name="robot-happy-outline" size={normalize(24)} color="#fff" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </Animated.View>
+
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
@@ -776,12 +973,13 @@ export default HomeScreen;
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: '#e3e6e6', // Amazon-ish background
+        backgroundColor: 'transparent',
     },
     header: {
         paddingBottom: hp(1.5),
         paddingTop: Platform.OS === 'android' ? hp(1) : 0,
         paddingHorizontal: wp(4),
+        // Removed dark gradient background
     },
     searchRow: {
         flexDirection: 'row',
@@ -791,14 +989,14 @@ const styles = StyleSheet.create({
     regionSelector: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginLeft: 10, // Moved to left margin
-        backgroundColor: '#3a4a5e',
+        marginLeft: 10,
+        backgroundColor: 'rgba(255,255,255,0.2)', // Glassmorphism effect
         paddingHorizontal: 6,
-        paddingVertical: 8, // Taller to match search bar height approx
+        paddingVertical: 8,
         height: 45,
         borderRadius: 5,
         borderWidth: 1,
-        borderColor: '#555'
+        borderColor: 'rgba(255,255,255,0.3)'
     },
     searchBar: {
         flex: 1,
@@ -809,6 +1007,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         height: 45,
         elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     searchInput: {
         flex: 1,
@@ -816,17 +1018,16 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     addressBar: {
-        backgroundColor: '#b5e0d4',
+        backgroundColor: 'rgba(255, 255, 255, 0.4)', // Semi-transparent
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: wp(4),
-        paddingVertical: 12, // slightly taller for readability
-        borderBottomWidth: 1,
-        borderBottomColor: '#a0cbbf'
+        paddingVertical: 12,
+        borderBottomWidth: 0, // Remove border for cleaner look
     },
     addressText: {
         fontSize: normalize(13),
-        color: '#000',
+        color: '#333',
         fontWeight: '500',
     },
     togglePill: {
@@ -843,10 +1044,10 @@ const styles = StyleSheet.create({
         color: '#E50914'
     },
     scrollContent: {
-        paddingBottom: hp(10), // Space for bottom tab
+        paddingBottom: hp(18),
     },
     sectionContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: 'transparent',
         paddingVertical: hp(1.5),
         marginBottom: hp(1),
     },
@@ -878,8 +1079,22 @@ const styles = StyleSheet.create({
     },
     bannerContainer: {
         width: width,
-        height: hp(25),
-        position: 'relative',
+        height: hp(28),
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 5
+    },
+    bannerCard: {
+        width: width - wp(8),
+        height: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+        backgroundColor: '#000',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
     },
     bannerImage: {
         width: '100%',
@@ -887,42 +1102,72 @@ const styles = StyleSheet.create({
     },
     bannerGradient: {
         position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: '60%',
+        left: 0, right: 0, bottom: 0, top: 0,
     },
     bannerTextContainer: {
         position: 'absolute',
         bottom: 20,
         left: 20,
+        right: 20,
     },
-    dealBadge: {
-        backgroundColor: '#CC0C39',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
+    premiumBadge: {
+        backgroundColor: '#FFD700',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
         alignSelf: 'flex-start',
-        marginBottom: 5,
+        marginBottom: 10,
     },
-    dealText: {
-        color: '#fff',
+    premiumBadgeText: {
+        color: '#000',
         fontSize: normalize(10),
         fontWeight: 'bold',
     },
     bannerTitle: {
         color: '#fff',
-        fontSize: normalize(20),
-        fontWeight: 'bold',
-        textShadowColor: 'rgba(0,0,0,0.7)',
+        fontSize: normalize(24),
+        fontWeight: '800',
+        marginBottom: 15,
+        textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 3,
+        lineHeight: 32,
+    },
+    bannerFooter: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between'
+    },
+    discountText: {
+        color: '#fff',
+        fontSize: normalize(26),
+        fontWeight: '900',
     },
     bannerPrice: {
         color: '#fff',
         fontSize: normalize(22),
         fontWeight: 'bold',
-        marginTop: 5,
+    },
+    timeText: {
+        color: '#eee',
+        fontSize: normalize(12),
+        fontWeight: '500',
+        marginTop: 4
+    },
+    shopNowBtn: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
+        elevation: 3
+    },
+    shopNowText: {
+        color: '#000',
+        fontWeight: 'bold',
+        fontSize: normalize(13),
+        marginRight: 6
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -1138,24 +1383,26 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14
     },
-    aiFab: {
+    aiFabContainer: {
         position: 'absolute',
-        bottom: 25,
-        right: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        zIndex: 1000
+        bottom: hp(12),
+        right: wp(5),
+        zIndex: 9999,
+        elevation: 10,
+        shadowColor: '#DD2476', // Colored shadow for glow
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+    },
+    aiFab: {
+        width: wp(14), // Responsive size
+        height: wp(14),
+        borderRadius: wp(7),
+        overflow: 'hidden',
     },
     aiFabGradient: {
         width: '100%',
         height: '100%',
-        borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center'
     }

@@ -8,15 +8,19 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
-    ActivityIndicator
+    ActivityIndicator,
+    StatusBar
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../config/apiConfig";
 import { normalize, wp, hp } from "../utils/responsive";
+import { useLanguage } from "../context/LanguageContext";
 
 const ChatScreen = ({ route, navigation }) => {
+    const { t } = useLanguage();
     const { receiverId, receiverName } = route.params;
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState("");
@@ -87,124 +91,207 @@ const ChatScreen = ({ route, navigation }) => {
     const renderItem = ({ item }) => {
         const isMe = item.senderId === userId;
         return (
-            <View style={[styles.msgContainer, isMe ? styles.myMsg : styles.theirMsg]}>
-                <Text style={[styles.msgText, isMe ? styles.myMsgText : styles.theirMsgText]}>
-                    {item.message}
-                </Text>
-                <Text style={styles.timeText}>
-                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+            <View style={[styles.msgWrapper, isMe ? styles.myMsgWrapper : styles.theirMsgWrapper]}>
+                {isMe ? (
+                    <LinearGradient
+                        colors={['#E50914', '#B81C26']}
+                        style={[styles.msgContainer, styles.myMsg]}
+                    >
+                        <Text style={styles.myMsgText}>{item.message}</Text>
+                        <Text style={styles.myTimeText}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                    </LinearGradient>
+                ) : (
+                    <View style={[styles.msgContainer, styles.theirMsg]}>
+                        <Text style={styles.theirMsgText}>{item.message}</Text>
+                        <Text style={styles.theirTimeText}>
+                            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                    </View>
+                )}
             </View>
         );
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <View style={styles.headerInfo}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{receiverName?.charAt(0) || '?'}</Text>
-                    </View>
-                    <Text style={styles.headerTitle}>{receiverName || "Chat"}</Text>
-                </View>
-            </View>
-
-            {loading ? (
-                <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 50 }} />
-            ) : (
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={renderItem}
-                    keyExtractor={(item, index) => index.toString()}
-                    contentContainerStyle={styles.list}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    ListEmptyComponent={
-                        <View style={{ alignItems: 'center', marginTop: 50, opacity: 0.5 }}>
-                            <Ionicons name="chatbubbles-outline" size={60} color="#ccc" />
-                            <Text style={{ color: '#999', marginTop: 10 }}>No messages yet. Say hi! 👋</Text>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
+                >
+                    {/* Glassmorphic Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
+                        </TouchableOpacity>
+                        <View style={styles.headerInfo}>
+                            <LinearGradient
+                                colors={['#E50914', '#B81C26']}
+                                style={styles.avatar}
+                            >
+                                <Text style={styles.avatarText}>{receiverName?.charAt(0) || '?'}</Text>
+                            </LinearGradient>
+                            <Text style={styles.headerTitle}>{receiverName || "Chat"}</Text>
                         </View>
-                    }
-                />
-            )}
+                    </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-            >
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Type a message..."
-                        value={text}
-                        onChangeText={setText}
-                    />
-                    <TouchableOpacity onPress={sendMessage} style={styles.sendBtn}>
-                        <Ionicons name="send" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+                    {loading ? (
+                        <ActivityIndicator size="large" color="#E50914" style={{ marginTop: hp(10), flex: 1 }} />
+                    ) : (
+                        <FlatList
+                            ref={flatListRef}
+                            data={messages}
+                            renderItem={renderItem}
+                            keyExtractor={(item, index) => index.toString()}
+                            contentContainerStyle={styles.list}
+                            style={{ flex: 1 }}
+                            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                            showsVerticalScrollIndicator={false}
+                            ListEmptyComponent={
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name="chatbubbles-outline" size={normalize(60)} color="#ccc" />
+                                    <Text style={styles.emptyText}>{t('sayHi')}</Text>
+                                </View>
+                            }
+                        />
+                    )}
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder={t('typeMessage')}
+                            value={text}
+                            onChangeText={setText}
+                            placeholderTextColor="#888"
+                        />
+                        <TouchableOpacity onPress={sendMessage} style={styles.sendBtn} disabled={!text.trim()}>
+                            <LinearGradient
+                                colors={text.trim() ? ['#E50914', '#B81C26'] : ['#ccc', '#bbb']}
+                                style={styles.sendBtnGradient}
+                            >
+                                <Ionicons name="send" size={normalize(20)} color="#fff" />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#fff" },
+    gradientContainer: { flex: 1 },
+    container: { flex: 1 },
     header: {
         flexDirection: "row",
         alignItems: "center",
-        padding: 15,
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(1.5),
+        backgroundColor: 'rgba(255,255,255,0.6)',
         borderBottomWidth: 1,
-        borderBottomColor: "#eee",
+        borderBottomColor: 'rgba(255,255,255,0.3)',
     },
-    backBtn: { marginRight: 15 },
+    backBtn: { marginRight: wp(3) },
     headerInfo: { flexDirection: 'row', alignItems: 'center' },
-    avatar: { width: 35, height: 35, borderRadius: 17.5, backgroundColor: '#E50914', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-    avatarText: { color: '#fff', fontWeight: 'bold' },
-    headerTitle: { fontSize: 18, fontWeight: "bold" },
-    list: { padding: 15, paddingBottom: 20 },
+    avatar: {
+        width: wp(10),
+        height: wp(10),
+        borderRadius: wp(5),
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: wp(3)
+    },
+    avatarText: { color: '#fff', fontWeight: 'bold', fontSize: normalize(16) },
+    headerTitle: { fontSize: normalize(18), fontWeight: "bold", color: '#333' },
+    list: { paddingHorizontal: wp(4), paddingBottom: hp(5), paddingTop: hp(2) },
+    msgWrapper: {
+        marginBottom: hp(1.5),
+        width: '100%',
+    },
+    myMsgWrapper: {
+        alignItems: 'flex-end',
+    },
+    theirMsgWrapper: {
+        alignItems: 'flex-start',
+    },
     msgContainer: {
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 10,
+        padding: wp(3.5),
+        borderRadius: 16,
         maxWidth: "80%",
+        elevation: 1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     myMsg: {
-        alignSelf: "flex-end",
-        backgroundColor: "#E50914",
+        borderBottomRightRadius: 4,
     },
     theirMsg: {
-        alignSelf: "flex-start",
-        backgroundColor: "#f0f0f0",
+        backgroundColor: "#fff",
+        borderTopLeftRadius: 4,
     },
-    msgText: { fontSize: 16 },
-    myMsgText: { color: "#fff" },
-    theirMsgText: { color: "#333" },
-    timeText: { fontSize: 10, marginTop: 5, alignSelf: 'flex-end', opacity: 0.7 },
+    myMsgText: { color: "#fff", fontSize: normalize(15) },
+    theirMsgText: { color: "#333", fontSize: normalize(15) },
+    myTimeText: {
+        fontSize: normalize(10),
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 4,
+        alignSelf: 'flex-end'
+    },
+    theirTimeText: {
+        fontSize: normalize(10),
+        color: '#999',
+        marginTop: 4,
+        alignSelf: 'flex-end'
+    },
     inputContainer: {
         flexDirection: "row",
-        padding: 10,
+        padding: wp(3),
+        backgroundColor: 'rgba(255,255,255,0.9)',
         borderTopWidth: 1,
-        borderTopColor: "#eee",
+        borderTopColor: 'rgba(0,0,0,0.05)',
         alignItems: "center",
     },
     input: {
         flex: 1,
-        backgroundColor: "#f9f9f9",
-        borderRadius: 20,
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        marginRight: 10,
-        fontSize: 16
+        backgroundColor: "#F3F4F6",
+        borderRadius: 25,
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(1.2),
+        marginRight: wp(3),
+        fontSize: normalize(15),
+        color: '#333'
     },
     sendBtn: {
-        backgroundColor: "#E50914",
-        padding: 10,
         borderRadius: 25,
+        overflow: 'hidden',
     },
+    sendBtnGradient: {
+        width: wp(11),
+        height: wp(11),
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: hp(10),
+        opacity: 0.6
+    },
+    emptyText: {
+        color: '#888',
+        marginTop: hp(2),
+        fontSize: normalize(14)
+    }
 });
 
 export default ChatScreen;

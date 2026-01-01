@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -11,12 +11,12 @@ const { width } = Dimensions.get('window');
 const SellerOnboardingScreen = () => {
     const navigation = useNavigation();
 
-    const FeatureItem = ({ icon, title, description }) => (
-        <View style={styles.featureItem}>
-            <View style={styles.featureIconContainer}>
-                <MaterialIcons name={icon} size={32} color="#E50914" />
+    const FeatureItem = ({ icon, title, description, color }) => (
+        <View style={styles.glassFeatureCard}>
+            <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
+                <MaterialIcons name={icon} size={normalize(28)} color={color} />
             </View>
-            <View style={styles.featureTextContainer}>
+            <View style={{ flex: 1 }}>
                 <Text style={styles.featureTitle}>{title}</Text>
                 <Text style={styles.featureDescription}>{description}</Text>
             </View>
@@ -24,249 +24,272 @@ const SellerOnboardingScreen = () => {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* Header Image / Hero Section */}
-                <View style={styles.heroSection}>
-                    <LinearGradient
-                        colors={['#E50914', '#B20710']}
-                        style={styles.heroGradient}
-                    >
-                        <View style={styles.navBar}>
-                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                                <Ionicons name="arrow-back" size={24} color="#fff" />
-                            </TouchableOpacity>
-                            <Text style={styles.navTitle}>Reel2Cart Business</Text>
-                            <View style={{ width: 24 }} />
+                    {/* Navbar */}
+                    <View style={styles.navBar}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.navTitle}>Reel2Cart Business</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+
+                    {/* Hero Section */}
+                    <View style={styles.heroSection}>
+                        <View style={styles.heroIllustration}>
+                            <LinearGradient colors={['#E50914', '#FF5F6D']} style={styles.illustrationCircle}>
+                                <Ionicons name="storefront" size={normalize(60)} color="#fff" />
+                            </LinearGradient>
                         </View>
+                        <Text style={styles.heroTitle}>Become a Seller</Text>
+                        <Text style={styles.heroSubtitle}>Start your digital store in seconds. Reach millions, sell globally.</Text>
 
-                        <View style={styles.heroContent}>
-                            <Text style={styles.heroTitle}>Become a Seller on Reel2Cart</Text>
-                            <Text style={styles.heroSubtitle}>Reach millions of customers and grow your business today.</Text>
-                            <TouchableOpacity style={styles.heroButton} onPress={() => navigation.navigate('SellerRegistration')}>
-                                <Text style={styles.heroButtonText}>Start Selling</Text>
-                            </TouchableOpacity>
+                        <TouchableOpacity style={styles.heroButton} onPress={() => navigation.navigate('SellerRegistration')}>
+                            <Text style={styles.heroButtonText}>Start Selling Now</Text>
+                            <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Stats Banner */}
+                    <View style={styles.glassStatsCard}>
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>10M+</Text>
+                            <Text style={styles.statLabel}>Shoppers</Text>
                         </View>
-                    </LinearGradient>
-                </View>
-
-                {/* Stats / Trust Banner */}
-                <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>10M+</Text>
-                        <Text style={styles.statLabel}>Customers</Text>
+                        <View style={styles.divider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>0%</Text>
+                            <Text style={styles.statLabel}>Commission*</Text>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.statItem}>
+                            <Text style={styles.statNumber}>24/7</Text>
+                            <Text style={styles.statLabel}>Support</Text>
+                        </View>
                     </View>
-                    <View style={styles.divider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>24/7</Text>
-                        <Text style={styles.statLabel}>Support</Text>
+
+                    {/* Features List */}
+                    <View style={styles.featuresContainer}>
+                        <Text style={styles.sectionHeader}>Why choose us?</Text>
+                        <FeatureItem
+                            icon="videocam"
+                            title="Reels-Powered Sales"
+                            description="World's first reels-powered online shopping platform."
+                            color="#E50914"
+                        />
+                        <FeatureItem
+                            icon="touch-app"
+                            title="Shoppable Videos"
+                            description="Turn viewers into buyers instantly with direct links."
+                            color="#3B82F6"
+                        />
+                        <FeatureItem
+                            icon="trending-up"
+                            title="Higher Engagement"
+                            description="Video listings drive 5x more engagement than images."
+                            color="#10B981"
+                        />
+                        <FeatureItem
+                            icon="stars"
+                            title="Viral Reach"
+                            description="Get discovered by millions on our trending feed."
+                            color="#F59E0B"
+                        />
                     </View>
-                    <View style={styles.divider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>0%</Text>
-                        <Text style={styles.statLabel}>Listing Fees</Text>
+
+                    {/* Login Link */}
+                    <View style={styles.loginFooter}>
+                        <Text style={styles.loginText}>Already have a seller account?</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.loginLink}>Login to Dashboard</Text>
+                        </TouchableOpacity>
                     </View>
-                </View>
 
-                {/* Why Sell Details */}
-                <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionHeader}>Why sell on Reel2Cart?</Text>
-
-                    <FeatureItem
-                        icon="public"
-                        title="Reach Huge Audience"
-                        description="Access crores of customers across the country instantly."
-                    />
-                    <FeatureItem
-                        icon="payments"
-                        title="Timely Payments"
-                        description="Get paid securely and on time directly to your bank account."
-                    />
-                    <FeatureItem
-                        icon="local-shipping"
-                        title="Stress-free Shipping"
-                        description="Ship your products easily with our logistics partners."
-                    />
-                    <FeatureItem
-                        icon="support-agent"
-                        title="Dedicated Support"
-                        description="Expert seller support to help you at every step."
-                    />
-                </View>
-
-                {/* Call to Action Footer */}
-                <View style={styles.ctaContainer}>
-                    <Text style={styles.ctaText}>Ready to start your journey?</Text>
-                    <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('SellerRegistration')}>
-                        <Text style={styles.ctaButtonText}>Create Account</Text>
-                    </TouchableOpacity>
-                </View>
-
-            </ScrollView>
-        </SafeAreaView>
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
+    gradientContainer: {
+        flex: 1,
+    },
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
     scrollContent: {
-        paddingBottom: 30,
-    },
-    heroSection: {
-        height: hp(35),
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        overflow: 'hidden',
-    },
-    heroGradient: {
-        flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 10,
+        paddingBottom: hp(5),
     },
     navBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
+    },
+    backButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.6)',
     },
     navTitle: {
-        color: '#fff',
-        fontSize: 18,
+        fontSize: normalize(18),
         fontWeight: 'bold',
+        color: '#333',
     },
-    heroContent: {
+
+    // Hero Section
+    heroSection: {
         alignItems: 'center',
+        paddingHorizontal: wp(8),
+        marginTop: hp(2),
+        marginBottom: hp(4),
+    },
+    heroIllustration: {
+        marginBottom: hp(3),
+        shadowColor: "#E50914",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 8,
+    },
+    illustrationCircle: {
+        width: wp(35),
+        height: wp(35),
+        borderRadius: wp(17.5),
         justifyContent: 'center',
-        flex: 1,
-        paddingBottom: 30,
+        alignItems: 'center',
     },
     heroTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#fff',
+        fontSize: normalize(32),
+        fontWeight: '800',
+        color: '#1F2937',
         textAlign: 'center',
         marginBottom: 10,
     },
     heroSubtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
+        fontSize: normalize(16),
+        color: '#6B7280',
         textAlign: 'center',
-        marginBottom: 25,
-        lineHeight: 22,
+        marginBottom: hp(4),
+        lineHeight: 24,
     },
     heroButton: {
-        backgroundColor: '#fff',
-        paddingVertical: 12,
-        paddingHorizontal: 30,
-        borderRadius: 25,
-        elevation: 5,
+        backgroundColor: '#111827',
+        paddingVertical: hp(2),
+        paddingHorizontal: wp(8),
+        borderRadius: 100,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     heroButtonText: {
-        color: '#E50914',
-        fontSize: 16,
+        color: '#fff',
+        fontSize: normalize(16),
         fontWeight: 'bold',
     },
-    statsContainer: {
+
+    // Glass Cards
+    glassStatsCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        backgroundColor: '#fff',
-        marginHorizontal: 20,
-        marginTop: -30,
-        padding: 20,
-        borderRadius: 15,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        marginHorizontal: wp(5),
+        padding: wp(5),
+        borderRadius: 24,
+        alignItems: 'center',
+        marginBottom: hp(4),
+        // No borders
     },
     statItem: {
         alignItems: 'center',
         flex: 1,
     },
     statNumber: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: normalize(20),
+        fontWeight: '800',
         color: '#333',
     },
     statLabel: {
-        fontSize: 12,
-        color: '#777',
+        fontSize: normalize(12),
+        color: '#666',
         marginTop: 4,
+        fontWeight: '600'
     },
     divider: {
         width: 1,
-        height: '100%',
-        backgroundColor: '#eee',
+        height: 30,
+        backgroundColor: 'rgba(0,0,0,0.1)',
     },
-    sectionContainer: {
-        padding: 20,
-        marginTop: 10,
+
+    // Features
+    featuresContainer: {
+        paddingHorizontal: wp(5),
     },
     sectionHeader: {
-        fontSize: 22,
+        fontSize: normalize(20),
         fontWeight: 'bold',
-        color: '#222',
-        marginBottom: 20,
-        textAlign: 'center',
+        color: '#333',
+        marginBottom: hp(3),
     },
-    featureItem: {
+    glassFeatureCard: {
         flexDirection: 'row',
-        marginBottom: 25,
         alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        marginBottom: hp(2),
+        padding: wp(4),
+        borderRadius: 20,
     },
-    featureIconContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#FFF0F1',
+    iconBox: {
+        width: 54,
+        height: 54,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 20,
-    },
-    featureTextContainer: {
-        flex: 1,
+        marginRight: 16,
     },
     featureTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: normalize(16),
+        fontWeight: '700',
         color: '#333',
-        marginBottom: 5,
+        marginBottom: 4,
     },
     featureDescription: {
-        fontSize: 14,
+        fontSize: normalize(13),
         color: '#666',
-        lineHeight: 20,
+        lineHeight: 18,
     },
-    ctaContainer: {
-        backgroundColor: '#F8F9FA',
-        padding: 30,
-        marginHorizontal: 20,
-        borderRadius: 20,
+
+    // Footer
+    loginFooter: {
+        marginTop: hp(2),
         alignItems: 'center',
+        paddingBottom: hp(2)
     },
-    ctaText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
+    loginText: {
+        fontSize: normalize(14),
+        color: '#888',
+        marginBottom: 4
     },
-    ctaButton: {
-        backgroundColor: '#E50914',
-        paddingVertical: 15,
-        width: '100%',
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    ctaButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    loginLink: {
+        fontSize: normalize(14),
+        color: '#E50914',
+        fontWeight: 'bold'
+    }
 });
 
 export default SellerOnboardingScreen;

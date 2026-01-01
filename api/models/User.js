@@ -61,8 +61,21 @@ const userSchema = new mongoose.Schema({
     type: String
   },
   location: {
-    type: { type: String, default: 'Point' },
-    coordinates: [Number] // [longitude, latitude]
+    type: {
+      type: String,
+      enum: ['Point'],
+    },
+    coordinates: {
+      type: [Number],
+    }
+  },
+  pushToken: {
+    type: String,
+    default: null
+  },
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false
   }
 });
 userSchema.index({ location: "2dsphere" });

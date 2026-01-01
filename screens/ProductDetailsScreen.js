@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, StatusBar, FlatList, Share, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +10,7 @@ import { API_BASE_URL } from '../config/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProductDetailsScreen = ({ route, navigation }) => {
+    const { t } = useLanguage();
     const { formatPrice } = useCurrency();
     const { product } = route.params;
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -25,6 +25,8 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     const [productRating, setProductRating] = useState(product.rating || 0);
     const [productReviewCount, setProductReviewCount] = useState(product.reviews || 0);
 
+    const [cartIds, setCartIds] = useState(new Set());
+
     // Calculate discount percentage
     const discountPercentage = product.originalPrice
         ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -38,9 +40,8 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                 if (storedUserInfo) {
                     const user = JSON.parse(storedUserInfo);
                     setUserId(user._id);
-                    // Fetch wishlist logic here if needed or pass from Home
-                    // simplified: just re-fetch for now or assume efficient cache
                     checkWishlist(user._id);
+                    checkCart(user._id);
                 }
 
                 // Determine Seller ID (Handles both populated object or string ID)
@@ -89,9 +90,22 @@ const ProductDetailsScreen = ({ route, navigation }) => {
         } catch (e) { console.error(e); }
     };
 
+    const checkCart = async (uid) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/cart/${uid}`);
+            const data = await res.json();
+            if (res.ok && data.cartItems) {
+                // Assuming cartItems contains objects with productId property or is mixed. 
+                // Based on addToCart payload, productId is stored.
+                const ids = new Set(data.cartItems.map(item => item.productId || item._id));
+                setCartIds(ids);
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const toggleWishlist = async () => {
         if (!userId) {
-            alert("Please login to use wishlist");
+            alert(t('loginRequired'));
             return;
         }
         const isWishlisted = wishlistIds.has(product._id);
@@ -125,9 +139,15 @@ const ProductDetailsScreen = ({ route, navigation }) => {
         try {
             const storedUserInfo = await AsyncStorage.getItem("userInfo");
             if (!storedUserInfo) {
-                alert("Please login to add to cart");
+                alert(t('loginToCart'));
                 return;
             }
+
+            if (cartIds.has(product._id)) {
+                Alert.alert("Already in Cart", "This item is already in your cart.");
+                return;
+            }
+
             const user = JSON.parse(storedUserInfo);
             const payload = {
                 userId: user._id,
@@ -145,7 +165,8 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
-                alert("Added to Cart!");
+                Alert.alert(t('success'), t('addedToCart'));
+                setCartIds(new Set(cartIds).add(product._id)); // Optimistically update
             }
         } catch (error) { console.error(error); }
     };
@@ -199,7 +220,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     const handleShare = async () => {
         try {
             await Share.share({
-                message: `Check out ${product.name} on Reel2Cart! Price: ${formatPrice(product.price)}`,
+                message: `${t('checkOut')} ${product.name} ${t('onReel2Cart')} ${t('price')}: ${formatPrice(product.price)}`,
             });
         } catch (error) {
             console.log(error);
@@ -243,243 +264,255 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
-                        <Ionicons name="share-social-outline" size={24} color="#333" />
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+                        <Ionicons name="arrow-back" size={24} color="#333" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Home', { screen: 'Cart' })} style={styles.headerBtn}>
-                        <Ionicons name="cart-outline" size={24} color="#333" />
-                        {/* Add Badge if needed */}
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                {/* Image Carousel */}
-                <View style={styles.carouselContainer}>
-                    <ScrollView
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        onScroll={onScroll}
-                        scrollEventThrottle={16}
-                    >
-                        {product.images.map((img, index) => (
-                            <Image
-                                key={index}
-                                source={{ uri: img }}
-                                style={styles.carouselImage}
-                                resizeMode="contain"
-                            />
-                        ))}
-                    </ScrollView>
-                    {/* Pagination Dots */}
-                    {product.images.length > 1 && (
-                        <View style={styles.pagination}>
-                            {product.images.map((_, i) => (
-                                <View key={i} style={[styles.dot, activeImageIndex === i && styles.activeDot]} />
-                            ))}
-                        </View>
-                    )}
-                    {/* Wishlist Fab */}
-                    <TouchableOpacity style={styles.wishlistFab} onPress={toggleWishlist}>
-                        <Ionicons
-                            name={wishlistIds.has(product._id) ? "heart" : "heart-outline"}
-                            size={24}
-                            color={wishlistIds.has(product._id) ? "#E50914" : "#555"}
-                        />
-                    </TouchableOpacity>
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
+                            <Ionicons name="share-social-outline" size={24} color="#333" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('Home', { screen: 'Cart' })} style={styles.headerBtn}>
+                            <Ionicons name="cart-outline" size={24} color="#333" />
+                            {/* Add Badge if needed */}
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Product Info */}
-                <View style={styles.infoContainer}>
-                    <View style={styles.titleRow}>
-                        <Text style={styles.brandText}>{product.category || 'Generic'}</Text>
-                        <View style={styles.ratingBadge}>
-                            <Text style={styles.ratingText}>{productRating || 'New'} </Text>
-                            <Ionicons name="star" size={12} color="#fff" />
-                        </View>
-                    </View>
-
-                    <Text style={styles.productName}>{product.name}</Text>
-
-                    <View style={styles.priceContainer}>
-                        <Text style={styles.price}>{formatPrice(product.price)}</Text>
-                        {product.originalPrice && (
-                            <>
-                                <Text style={styles.originalPrice}>{formatPrice(product.originalPrice)}</Text>
-                                <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
-                            </>
-                        )}
-                    </View>
-                    <Text style={styles.taxText}>Inclusive of all taxes</Text>
-
-                    <View style={styles.divider} />
-
-                    {/* Features / Details */}
-                    <Text style={styles.sectionTitle}>Description</Text>
-                    <Text style={styles.description}>{product.description}</Text>
-
-                    <View style={styles.divider} />
-
-                    <View style={styles.divider} />
-
-                    {/* Customer Reviews Section */}
-                    <Text style={styles.sectionTitle}>Customer Reviews ({productReviewCount})</Text>
-
-                    {/* Write Review Form */}
-                    <View style={styles.writeReviewContainer}>
-                        <Text style={styles.writeReviewTitle}>Rate this product</Text>
-                        <View style={styles.starRow}>
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <TouchableOpacity key={star} onPress={() => setUserReview({ ...userReview, rating: star })}>
-                                    <Ionicons
-                                        name={star <= userReview.rating ? "star" : "star-outline"}
-                                        size={32}
-                                        color={star <= userReview.rating ? "#FFA41C" : "#ccc"}
-                                        style={{ marginRight: 5 }}
-                                    />
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                        <TextInput
-                            style={styles.reviewInput}
-                            placeholder="Write your review here..."
-                            multiline
-                            numberOfLines={3}
-                            value={userReview.text}
-                            onChangeText={(text) => setUserReview({ ...userReview, text })}
-                        />
-                        <TouchableOpacity
-                            style={[styles.submitReviewBtn, submittingReview && { opacity: 0.7 }]}
-                            onPress={handleSubmitReview}
-                            disabled={submittingReview}
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                    {/* Image Carousel */}
+                    <View style={styles.carouselContainer}>
+                        <ScrollView
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            onScroll={onScroll}
+                            scrollEventThrottle={16}
                         >
-                            {submittingReview ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitReviewText}>Submit Review</Text>}
+                            {product.images.map((img, index) => (
+                                <Image
+                                    key={index}
+                                    source={{ uri: img }}
+                                    style={styles.carouselImage}
+                                    resizeMode="contain"
+                                />
+                            ))}
+                        </ScrollView>
+                        {/* Pagination Dots */}
+                        {product.images.length > 1 && (
+                            <View style={styles.pagination}>
+                                {product.images.map((_, i) => (
+                                    <View key={i} style={[styles.dot, activeImageIndex === i && styles.activeDot]} />
+                                ))}
+                            </View>
+                        )}
+                        {/* Wishlist Fab */}
+                        <TouchableOpacity style={styles.wishlistFab} onPress={toggleWishlist}>
+                            <Ionicons
+                                name={wishlistIds.has(product._id) ? "heart" : "heart-outline"}
+                                size={24}
+                                color={wishlistIds.has(product._id) ? "#E50914" : "#555"}
+                            />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Reviews List */}
-                    {allReviews && allReviews.length > 0 ? (
-                        [...allReviews].reverse().map((comment, index) => (
-                            <View key={index} style={styles.reviewItem}>
-                                <View style={styles.reviewHeader}>
-                                    <View style={styles.reviewAvatar}>
-                                        <Text style={styles.reviewAvatarText}>{(comment.userName || 'U').charAt(0).toUpperCase()}</Text>
-                                    </View>
-                                    <View>
-                                        <Text style={styles.reviewUser}>{comment.userName || 'User'}</Text>
-                                        {/* Display User Rating if available */}
-                                        <View style={{ flexDirection: 'row' }}>
-                                            {[1, 2, 3, 4, 5].map(s => (
-                                                <Ionicons
-                                                    key={s}
-                                                    name="star"
-                                                    size={10}
-                                                    color={s <= (comment.rating || 5) ? "#FFA41C" : "#e3e3e3"}
-                                                />
-                                            ))}
-                                        </View>
-                                    </View>
+                    {/* Product Info */}
+                    <View style={styles.infoContainer}>
+                        <View style={styles.glassCard}>
+                            <View style={styles.titleRow}>
+                                <Text style={styles.brandText}>{product.category || 'Generic'}</Text>
+                                <View style={styles.ratingBadge}>
+                                    <Text style={styles.ratingText}>{productRating || 'New'} </Text>
+                                    <Ionicons name="star" size={12} color="#fff" />
                                 </View>
-                                <Text style={styles.reviewText}>{comment.text}</Text>
-                                <Text style={styles.reviewDate}>{new Date(comment.createdAt).toLocaleDateString()}</Text>
-                                {index < allReviews.length - 1 && <View style={styles.reviewDivider} />}
                             </View>
-                        ))
-                    ) : (
-                        <Text style={styles.noReviewsText}>No reviews yet. Be the first to review!</Text>
-                    )}
 
-                    {/* Seller Info */}
-                    <TouchableOpacity
-                        style={styles.sellerRow}
-                        onPress={() => seller && navigation.navigate('SellerProfile', { sellerId: seller._id })}
-                        disabled={!seller}
-                    >
-                        <View style={styles.sellerIcon}>
-                            {seller?.profileImage ? (
-                                <Image source={{ uri: seller.profileImage }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                            <Text style={styles.productName}>{product.name}</Text>
+
+                            <View style={styles.priceContainer}>
+                                <Text style={styles.price}>{formatPrice(product.price)}</Text>
+                                {product.originalPrice && (
+                                    <>
+                                        <Text style={styles.originalPrice}>{formatPrice(product.originalPrice)}</Text>
+                                        <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
+                                    </>
+                                )}
+                            </View>
+                            <Text style={styles.taxText}>{t('inclusiveTaxes')}</Text>
+
+                            <View style={styles.divider} />
+
+                            {/* Features / Details */}
+                            <Text style={styles.sectionTitle}>{t('description')}</Text>
+                            <Text style={styles.description}>{product.description}</Text>
+
+                            <View style={styles.divider} />
+
+                            {/* Seller Info */}
+                            <TouchableOpacity
+                                style={styles.sellerRow}
+                                onPress={() => seller && navigation.navigate('SellerProfile', { sellerId: seller._id })}
+                                disabled={!seller}
+                            >
+                                <View style={styles.sellerIcon}>
+                                    {seller?.profileImage ? (
+                                        <Image source={{ uri: seller.profileImage }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                                    ) : (
+                                        <Ionicons name="storefront-outline" size={24} color="#555" />
+                                    )}
+                                </View>
+                                <View>
+                                    <Text style={styles.sellerLabel}>{t('soldBy')}</Text>
+                                    <Text style={styles.sellerName}>{seller ? (seller.businessName || seller.sellerName) : 'Loading...'}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#999" style={{ marginLeft: 'auto' }} />
+                            </TouchableOpacity>
+
+                        </View>
+
+                        {/* Customer Reviews Section */}
+                        <View style={[styles.glassCard, { marginTop: hp(2) }]}>
+                            <Text style={styles.sectionTitle}>{t('customerReviews')} ({productReviewCount})</Text>
+
+                            {/* Write Review Form */}
+                            <View style={styles.writeReviewContainer}>
+                                <Text style={styles.writeReviewTitle}>{t('rateProduct')}</Text>
+                                <View style={styles.starRow}>
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <TouchableOpacity key={star} onPress={() => setUserReview({ ...userReview, rating: star })}>
+                                            <Ionicons
+                                                name={star <= userReview.rating ? "star" : "star-outline"}
+                                                size={32}
+                                                color={star <= userReview.rating ? "#FFA41C" : "#ccc"}
+                                                style={{ marginRight: 5 }}
+                                            />
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <TextInput
+                                    style={styles.reviewInput}
+                                    placeholder="Write your review here..."
+                                    multiline
+                                    numberOfLines={3}
+                                    value={userReview.text}
+                                    onChangeText={(text) => setUserReview({ ...userReview, text })}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.submitReviewBtn, submittingReview && { opacity: 0.7 }]}
+                                    onPress={handleSubmitReview}
+                                    disabled={submittingReview}
+                                >
+                                    {submittingReview ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitReviewText}>{t('submitReview')}</Text>}
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Reviews List */}
+                            {allReviews && allReviews.length > 0 ? (
+                                [...allReviews].reverse().map((comment, index) => (
+                                    <View key={index} style={styles.reviewItem}>
+                                        <View style={styles.reviewHeader}>
+                                            <View style={styles.reviewAvatar}>
+                                                <Text style={styles.reviewAvatarText}>{(comment.userName || 'U').charAt(0).toUpperCase()}</Text>
+                                            </View>
+                                            <View>
+                                                <Text style={styles.reviewUser}>{comment.userName || 'User'}</Text>
+                                                {/* Display User Rating if available */}
+                                                <View style={{ flexDirection: 'row' }}>
+                                                    {[1, 2, 3, 4, 5].map(s => (
+                                                        <Ionicons
+                                                            key={s}
+                                                            name="star"
+                                                            size={10}
+                                                            color={s <= (comment.rating || 5) ? "#FFA41C" : "#e3e3e3"}
+                                                        />
+                                                    ))}
+                                                </View>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.reviewText}>{comment.text}</Text>
+                                        <Text style={styles.reviewDate}>{new Date(comment.createdAt).toLocaleDateString()}</Text>
+                                        {index < allReviews.length - 1 && <View style={styles.reviewDivider} />}
+                                    </View>
+                                ))
                             ) : (
-                                <Ionicons name="storefront-outline" size={24} color="#555" />
+                                <Text style={styles.noReviewsText}>{t('noReviewsYet')}</Text>
                             )}
                         </View>
-                        <View>
-                            <Text style={styles.sellerLabel}>Sold By</Text>
-                            <Text style={styles.sellerName}>{seller ? (seller.businessName || seller.sellerName) : 'Loading...'}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={20} color="#999" style={{ marginLeft: 'auto' }} />
+
+
+                        {/* Similar Products */}
+                        {similarProducts.length > 0 && (
+                            <View style={styles.suggestionSection}>
+                                <Text style={styles.sectionTitle}>{t('similarProducts')}</Text>
+                                <FlatList
+                                    horizontal
+                                    data={similarProducts}
+                                    renderItem={renderProductCard}
+                                    keyExtractor={item => item._id}
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={{ paddingHorizontal: 5 }}
+                                />
+                            </View>
+                        )}
+
+                        {/* Recommended Products */}
+                        {recommendedProducts.length > 0 && (
+                            <View style={styles.suggestionSection}>
+                                <Text style={styles.sectionTitle}>{t('recommendedForYou')}</Text>
+                                <FlatList
+                                    horizontal
+                                    data={recommendedProducts}
+                                    renderItem={renderProductCard}
+                                    keyExtractor={item => "rec_" + item._id}
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={{ paddingHorizontal: 5 }}
+                                />
+                            </View>
+                        )}
+                    </View>
+                </ScrollView>
+
+                {/* Bottom Actions */}
+                <View style={styles.bottomBar}>
+                    <TouchableOpacity style={styles.cartBtn} onPress={addToCart}>
+                        <Text style={styles.cartBtnText}>{t('addToCart')}</Text>
                     </TouchableOpacity>
-
-                    <View style={styles.divider} />
-
-                    {/* Similar Products */}
-                    {similarProducts.length > 0 && (
-                        <View style={styles.suggestionSection}>
-                            <Text style={styles.sectionTitle}>Similar Products</Text>
-                            <FlatList
-                                horizontal
-                                data={similarProducts}
-                                renderItem={renderProductCard}
-                                keyExtractor={item => item._id}
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={{ paddingHorizontal: 5 }}
-                            />
-                        </View>
-                    )}
-
-                    {/* Recommended Products */}
-                    {recommendedProducts.length > 0 && (
-                        <View style={styles.suggestionSection}>
-                            <Text style={styles.sectionTitle}>Recommended for You</Text>
-                            <FlatList
-                                horizontal
-                                data={recommendedProducts}
-                                renderItem={renderProductCard}
-                                keyExtractor={item => "rec_" + item._id}
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={{ paddingHorizontal: 5 }}
-                            />
-                        </View>
-                    )}
+                    <TouchableOpacity style={styles.buyBtn} onPress={() => {
+                        addToCart(); // Or direct checkout logic
+                        navigation.navigate('Home', { screen: 'Cart' });
+                    }}>
+                        <Text style={styles.buyBtnText}>{t('buyNow')}</Text>
+                    </TouchableOpacity>
                 </View>
-            </ScrollView>
-
-            {/* Bottom Actions */}
-            <View style={styles.bottomBar}>
-                <TouchableOpacity style={styles.cartBtn} onPress={addToCart}>
-                    <Text style={styles.cartBtnText}>Add to Cart</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.buyBtn} onPress={() => {
-                    addToCart(); // Or direct checkout logic
-                    navigation.navigate('Home', { screen: 'Cart' });
-                }}>
-                    <Text style={styles.buyBtnText}>Buy Now</Text>
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
+    gradientContainer: {
+        flex: 1,
+    },
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: 'transparent',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: wp(4),
         paddingVertical: 10,
-        backgroundColor: '#fff',
+        backgroundColor: 'rgba(255,255,255,0.4)',
     },
     headerActions: {
         flexDirection: 'row',
@@ -487,16 +520,22 @@ const styles = StyleSheet.create({
     headerBtn: {
         padding: 8,
         marginLeft: 10,
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderRadius: 20
     },
     carouselContainer: {
         width: wp(100),
-        height: wp(100), // Square image for product details often looks best, or 4:3
-        backgroundColor: '#f9f9f9',
+        height: wp(90),
+        backgroundColor: 'transparent',
         position: 'relative',
+        alignItems: 'center',
+        paddingVertical: 10,
     },
     carouselImage: {
-        width: wp(100),
+        width: wp(90),
         height: '100%',
+        borderRadius: 20,
+        marginHorizontal: wp(5),
     },
     pagination: {
         position: 'absolute',
@@ -520,7 +559,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 20,
         right: 20,
-        backgroundColor: '#fff',
+        backgroundColor: 'rgba(255,255,255,0.85)',
         borderRadius: 25,
         width: 44,
         height: 44,
@@ -534,6 +573,18 @@ const styles = StyleSheet.create({
     },
     infoContainer: {
         padding: wp(4),
+    },
+    glassCard: {
+        backgroundColor: 'rgba(255,255,255,0.65)',
+        borderRadius: 20,
+        padding: wp(4),
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.8)',
+        shadowColor: "#E8DFF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 2,
     },
     titleRow: {
         flexDirection: 'row',
@@ -596,7 +647,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: '#eee',
+        backgroundColor: 'rgba(0,0,0,0.05)',
         marginVertical: 15,
     },
     sectionTitle: {
@@ -619,7 +670,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: 'rgba(255,255,255,0.8)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
@@ -715,13 +766,13 @@ const styles = StyleSheet.create({
     },
     reviewDivider: {
         height: 1,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: 'rgba(0,0,0,0.05)',
         marginVertical: 8,
     },
     similarCard: {
         width: wp(35),
         marginRight: 15,
-        backgroundColor: '#fff',
+        backgroundColor: 'rgba(255,255,255,0.7)',
         borderRadius: 8,
         padding: 8,
         borderWidth: 1,
@@ -750,9 +801,9 @@ const styles = StyleSheet.create({
         right: 0,
         flexDirection: 'row',
         padding: 10,
-        backgroundColor: '#fff',
+        backgroundColor: 'rgba(255,255,255,0.95)',
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: 'rgba(255,255,255,0.5)',
         elevation: 10,
     },
     cartBtn: {
@@ -763,6 +814,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 10,
+        elevation: 2,
     },
     cartBtnText: {
         color: '#000',
@@ -776,6 +828,7 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 2,
     },
     buyBtnText: {
         color: '#000',
@@ -789,22 +842,22 @@ const styles = StyleSheet.create({
     suggestionCard: {
         width: wp(40),
         marginRight: 15,
-        backgroundColor: '#fff',
+        backgroundColor: 'rgba(255,255,255,0.7)',
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: '#fff',
         overflow: 'hidden',
         elevation: 2,
         shadowColor: '#000',
         shadowOpacity: 0.05,
         shadowRadius: 5,
-        shadowOffset: { width: 0, height: 2 }
     },
     suggestionImageContainer: {
         width: '100%',
         height: wp(40),
         backgroundColor: '#f9f9f9',
-        position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     suggestionImage: {
         width: '100%',
@@ -818,21 +871,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#CC0C39',
         paddingHorizontal: 4,
         paddingVertical: 2,
-        borderRadius: 2,
+        borderRadius: 4,
     },
     cardDiscountText: {
         color: '#fff',
-        fontSize: 9,
+        fontSize: normalize(10),
         fontWeight: 'bold',
     },
     suggestionInfo: {
         padding: 8,
     },
     suggestionTitle: {
-        fontSize: normalize(13),
+        fontSize: normalize(12),
         color: '#333',
         marginBottom: 4,
-        height: 36, // Fixed height for 2 lines
+        height: 32,
     },
     suggestionRatingRow: {
         flexDirection: 'row',
@@ -840,30 +893,29 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     suggestionRatingText: {
-        fontSize: 10,
-        color: '#007185',
+        fontSize: normalize(10),
+        color: '#555',
         marginLeft: 2,
-        fontWeight: 'bold',
-        marginRight: 2
+        marginRight: 2,
     },
     suggestionReviewCount: {
-        fontSize: 10,
-        color: '#767676',
+        fontSize: normalize(10),
+        color: '#999',
     },
     suggestionPriceRow: {
         flexDirection: 'row',
-        alignItems: 'baseline',
+        alignItems: 'center',
     },
     suggestionPrice: {
-        fontSize: normalize(15),
+        fontSize: normalize(14),
         fontWeight: 'bold',
         color: '#000',
     },
     suggestionOriginalPrice: {
-        fontSize: normalize(11),
-        color: '#767676',
+        fontSize: normalize(10),
+        color: '#888',
         textDecorationLine: 'line-through',
-        marginLeft: 6,
+        marginLeft: 4,
     },
 });
 

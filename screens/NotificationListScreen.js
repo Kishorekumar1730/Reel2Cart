@@ -1,12 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/apiConfig';
+import { LinearGradient } from 'expo-linear-gradient';
 import { normalize, wp, hp } from '../utils/responsive';
-
 import { useNotifications } from '../context/NotificationContext';
 
 const NotificationListScreen = ({ navigation }) => {
@@ -27,10 +25,6 @@ const NotificationListScreen = ({ navigation }) => {
 
     const handlePress = (item) => {
         if (item.relatedId && (item.type === 'order_update' || item.type === 'new_order')) {
-            // If seller -> Seller Dashboard? For now both go to order details or dashboard
-            // Wait, we don't have a single Order Details screen that fits both perfectly yet, 
-            // but let's assume OrderDetailScreen for now.
-            // Or if it's "new_order" and user is seller, maybe go to SellerOrders?
             if (item.type === 'new_order') {
                 navigation.navigate('SellerDashboard');
             } else {
@@ -39,14 +33,13 @@ const NotificationListScreen = ({ navigation }) => {
         }
     };
 
-
     const getIcon = (type) => {
         switch (type) {
-            case 'order_update': return 'cube';
-            case 'new_order': return 'cart'; // For Sellers
-            case 'promotion': return 'pricetag';
-            case 'account': return 'person';
-            default: return 'notifications';
+            case 'order_update': return 'cube-outline';
+            case 'new_order': return 'cart-outline';
+            case 'promotion': return 'pricetag-outline';
+            case 'account': return 'person-outline';
+            default: return 'notifications-outline';
         }
     };
 
@@ -61,113 +54,167 @@ const NotificationListScreen = ({ navigation }) => {
     };
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity style={styles.card} onPress={() => handlePress(item)}>
-            <View style={[styles.iconContainer, { backgroundColor: getColor(item.type) + '20' }]}>
-                <Ionicons name={getIcon(item.type)} size={24} color={getColor(item.type)} />
+        <TouchableOpacity style={styles.glassCard} onPress={() => handlePress(item)} activeOpacity={0.8}>
+            <View style={[styles.iconContainer, { backgroundColor: getColor(item.type) + '15' }]}>
+                <Ionicons name={getIcon(item.type)} size={normalize(22)} color={getColor(item.type)} />
             </View>
             <View style={styles.content}>
-                <Text style={styles.title}>{item.title}</Text>
+                <View style={styles.rowBetween}>
+                    <Text style={styles.title}>{item.title}</Text>
+                    {!item.isRead && <View style={styles.dot} />}
+                </View>
                 <Text style={styles.message}>{item.message}</Text>
                 <Text style={styles.time}>
                     {new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
             </View>
-            {!item.isRead && <View style={styles.dot} />}
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
-                <TouchableOpacity onPress={markAllAsRead} style={styles.settingsBtn}>
-                    <Ionicons name="checkmark-done-circle-outline" size={26} color="#E50914" />
-                </TouchableOpacity>
-            </View>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            {loading ? (
-                <ActivityIndicator size="large" color="#E50914" style={{ marginTop: 50 }} />
-            ) : (
-                <FlatList
-                    data={notifications}
-                    keyExtractor={item => item._id}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.list}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="notifications-off-outline" size={60} color="#ccc" />
-                            <Text style={styles.emptyText}>No notifications yet.</Text>
-                            <Text style={styles.subEmptyText}>We'll verify updates here.</Text>
-                        </View>
-                    }
-                />
-            )}
-        </SafeAreaView>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <Ionicons name="chevron-back" size={normalize(26)} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Notifications</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity onPress={() => navigation.navigate('NotificationSettings')} style={[styles.settingsBtn, { marginRight: 10 }]}>
+                            <Ionicons name="settings-outline" size={normalize(24)} color="#333" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={markAllAsRead} style={styles.settingsBtn}>
+                            <Ionicons name="checkmark-done-circle-outline" size={normalize(26)} color="#E50914" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#E50914" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={notifications}
+                        keyExtractor={item => item._id}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.list}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={["#E50914"]} // Android
+                                tintColor="#E50914" // iOS
+                            />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <View style={styles.emptyIconBox}>
+                                    <Ionicons name="notifications-off-outline" size={normalize(40)} color="#999" />
+                                </View>
+                                <Text style={styles.emptyText}>No notifications yet</Text>
+                                <Text style={styles.subEmptyText}>We'll let you know when updates arrive.</Text>
+                            </View>
+                        }
+                    />
+                )}
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    gradientContainer: {
         flex: 1,
-        backgroundColor: '#fff',
+    },
+    safeArea: {
+        flex: 1,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        backgroundColor: '#fff'
+        paddingHorizontal: wp(5),
+        paddingVertical: hp(2),
     },
     headerTitle: {
-        fontSize: normalize(18),
-        fontWeight: 'bold',
-        color: '#333',
+        fontSize: normalize(20),
+        fontWeight: '700',
+        color: '#1a1a1a',
     },
-    backBtn: { padding: 5 },
-    settingsBtn: { padding: 5 },
-    list: {
-        padding: 15,
-    },
-    card: {
-        flexDirection: 'row',
-        padding: 15,
-        backgroundColor: '#fff',
+    backBtn: {
+        padding: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
         borderRadius: 12,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-        alignItems: 'center'
     },
-    iconContainer: {
-        width: 45,
-        height: 45,
-        borderRadius: 22.5,
+    settingsBtn: {
+        padding: 5,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        borderRadius: 12,
+    },
+    list: {
+        paddingHorizontal: wp(5),
+        paddingTop: hp(1),
+        paddingBottom: hp(5),
+    },
+    loadingContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 15,
+    },
+    glassCard: {
+        flexDirection: 'row',
+        padding: wp(4),
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 20,
+        marginBottom: hp(1.5),
+        borderWidth: 1,
+        borderColor: '#fff',
+        shadowColor: "#E8DFF5",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 2,
+        alignItems: 'flex-start',
+    },
+    iconContainer: {
+        width: wp(12),
+        height: wp(12),
+        borderRadius: wp(6),
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: wp(4),
     },
     content: {
         flex: 1,
     },
+    rowBetween: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 4,
+    },
     title: {
         fontSize: normalize(15),
-        fontWeight: '600',
+        fontWeight: '700',
         color: '#333',
-        marginBottom: 3
+        flex: 1,
+        marginRight: 8,
     },
     message: {
         fontSize: normalize(13),
         color: '#666',
-        lineHeight: 18,
-        marginBottom: 5
+        lineHeight: normalize(18),
+        marginBottom: 6,
     },
     time: {
         fontSize: normalize(11),
@@ -178,22 +225,34 @@ const styles = StyleSheet.create({
         height: 8,
         borderRadius: 4,
         backgroundColor: '#E50914',
-        marginLeft: 10
+        marginTop: 6,
     },
     emptyContainer: {
         alignItems: 'center',
-        marginTop: 100,
+        marginTop: hp(15),
+    },
+    emptyIconBox: {
+        width: wp(20),
+        height: wp(20),
+        borderRadius: wp(10),
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: hp(2),
+        borderWidth: 1,
+        borderColor: '#fff',
     },
     emptyText: {
-        fontSize: normalize(16),
-        fontWeight: '600',
-        color: '#555',
-        marginTop: 15
+        fontSize: normalize(18),
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: hp(1),
     },
     subEmptyText: {
-        fontSize: normalize(13),
-        color: '#999',
-        marginTop: 5
+        fontSize: normalize(14),
+        color: '#888',
+        textAlign: 'center',
+        width: '70%',
     }
 });
 

@@ -3,22 +3,25 @@ import {
     View, Text, StyleSheet, Dimensions, FlatList,
     Image, TouchableOpacity, ActivityIndicator,
     TextInput, Modal, Share, KeyboardAvoidingView, Platform,
-    TouchableWithoutFeedback, Animated
+    TouchableWithoutFeedback, Animated, StatusBar
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useFocusEffect, useNavigation, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useIsFocused, useRoute } from '@react-navigation/native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { wp, hp, normalize } from '../utils/responsive';
 import { useCurrency } from '../context/CurrencyContext';
+import { useAlert } from '../context/AlertContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 
 // --- COMMENT MODAL COMPONENT ---
 const CommentModal = ({ visible, onClose, comments, onAddComment, loading }) => {
+    const { t } = useLanguage();
     const [text, setText] = useState("");
 
     const handleSubmit = () => {
@@ -35,12 +38,12 @@ const CommentModal = ({ visible, onClose, comments, onAddComment, loading }) => 
             visible={visible}
             onRequestClose={onClose}
         >
-            <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+                <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
                     {/* Handle Bar */}
                     <View style={styles.modalHandle} />
 
-                    <Text style={styles.modalTitle}>Comments ({comments.length})</Text>
+                    <Text style={styles.modalTitle}>{t('comments')} ({comments.length})</Text>
 
                     <FlatList
                         data={[...comments].reverse()} // Newest first
@@ -63,7 +66,7 @@ const CommentModal = ({ visible, onClose, comments, onAddComment, loading }) => 
                         )}
                         style={styles.commentList}
                         ListEmptyComponent={
-                            <Text style={styles.noComments}>Be the first to comment!</Text>
+                            <Text style={styles.noComments}>{t('beFirstComment')}</Text>
                         }
                     />
 
@@ -75,7 +78,7 @@ const CommentModal = ({ visible, onClose, comments, onAddComment, loading }) => 
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Add a comment..."
+                                placeholder={t('addComment')}
                                 value={text}
                                 onChangeText={setText}
                                 placeholderTextColor="#999"
@@ -84,21 +87,23 @@ const CommentModal = ({ visible, onClose, comments, onAddComment, loading }) => 
                                 onPress={handleSubmit}
                                 disabled={!text.trim() || loading}
                             >
-                                <Text style={[styles.postText, !text.trim() && { color: '#ccc' }]}>Post</Text>
+                                <Text style={[styles.postText, !text.trim() && { color: '#ccc' }]}>{t('post')}</Text>
                             </TouchableOpacity>
                         </View>
                     </KeyboardAvoidingView>
                 </View>
-            </View>
+            </TouchableOpacity>
         </Modal>
     );
 };
 
 // --- SINGLE REEL ITEM ---
 const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
-    const { formatPrice } = useCurrency(); // Use Currency Hook
+    const { language, t } = useLanguage();
+    const { formatPrice } = useCurrency();
+    const { showAlert, showSuccess } = useAlert();
+    const insets = useSafeAreaInsets();
 
-    // Resolve Video URL (Handle relative paths)
     const getVideoUrl = (url) => {
         if (!url) return null;
         if (url.startsWith('http') || url.startsWith('file://')) return url;
@@ -107,48 +112,139 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
 
     const finalVideoUrl = getVideoUrl(item.videoUrl);
 
-    // Video Player
     const player = useVideoPlayer(finalVideoUrl, player => {
         player.loop = true;
     });
 
-    // Local State for Interaction (Optimistic Updates)
     const [isLiked, setIsLiked] = useState(item.likes?.includes(userId));
     const [likesCount, setLikesCount] = useState(item.likes?.length || 0);
     const [comments, setComments] = useState(item.comments || []);
     const [showComments, setShowComments] = useState(false);
-    const [lastTap, setLastTap] = useState(null); // Double tap logic
-    const heartScale = useRef(new Animated.Value(0)).current; // Big heart animation center
+    const [isFollowing, setIsFollowing] = useState(false);
+    const heartScale = useRef(new Animated.Value(0)).current;
+
+    // Playback State
+    const [manualPause, setManualPause] = useState(false);
+
+    const lastTap = useRef(null);
+    const tapTimeout = useRef(null);
+
+    // Sync Follow Status
+    useEffect(() => {
+        if (userId && item.sellerId && item.sellerId.followers) {
+            const followers = item.sellerId.followers;
+            if (Array.isArray(followers)) {
+                setIsFollowing(followers.includes(userId));
+            }
+        }
+    }, [item, userId]);
+
+    const handleFollow = async () => {
+        if (!userId) {
+            Alert.alert(
+                t('loginRequiredTitle'),
+                t('loginRequiredFollow'),
+                [
+                    { text: t('cancel'), style: 'cancel' },
+                    { text: t('login'), onPress: () => navigation.navigate('Login') }
+                ]
+            );
+            return;
+        }
+        const sellerId = item.sellerId?._id || item.sellerId;
+
+        if (!sellerId) return;
+
+        const newStatus = !isFollowing;
+        setIsFollowing(newStatus);
+
+        try {
+            await fetch(`${API_BASE_URL}/seller/follow/${sellerId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            });
+        } catch (error) {
+            console.error("Follow Error", error);
+            setIsFollowing(!newStatus);
+        }
+    };
+
+    // Real-time Reflection: Check status on focus
+    const checkFollowStatus = useCallback(async () => {
+        const sId = item.sellerId?._id || item.sellerId;
+        if (!userId || !sId) return;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/seller/profile/${sId}/public`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.seller && Array.isArray(data.seller.followers)) {
+                    setIsFollowing(data.seller.followers.includes(userId));
+                }
+            }
+        } catch (error) {
+            // Silent fail
+        }
+    }, [item.sellerId, userId]);
 
     useEffect(() => {
-        if (isActive && isScreenFocused) {
-            player.play();
-        } else {
-            player.pause();
+        if (isScreenFocused) {
+            checkFollowStatus();
         }
-    }, [isActive, isScreenFocused, player]);
+    }, [isScreenFocused, checkFollowStatus]);
 
-    // Handle Like (Sync with Wishlist)
+    useEffect(() => {
+        let mounted = true;
+        const managePlayback = () => {
+            if (!mounted) return;
+            try {
+                if (isActive && isScreenFocused && !manualPause) {
+                    player.play();
+                } else {
+                    player.pause();
+                }
+            } catch (error) {
+                // Player might be released or invalid
+            }
+        };
+
+        managePlayback();
+
+        return () => {
+            mounted = false;
+            try {
+                player.pause();
+            } catch (error) {
+                // Ignore if player is already released (prevents crash)
+            }
+        };
+    }, [isActive, isScreenFocused, manualPause, player]);
+
     const toggleLike = async () => {
         const newStatus = !isLiked;
         setIsLiked(newStatus);
         setLikesCount(prev => newStatus ? prev + 1 : prev - 1);
 
+        if (newStatus) {
+            Animated.sequence([
+                Animated.spring(heartScale, { toValue: 1, useNativeDriver: true }),
+                Animated.timing(heartScale, { toValue: 0, duration: 200, delay: 500, useNativeDriver: true })
+            ]).start();
+        }
+
         try {
-            // 1. Social Like Endpoint
             await fetch(`${API_BASE_URL}/products/${item._id}/like`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId })
             });
 
-            // 2. Wishlist Sync
             if (newStatus) {
-                // Add to Wishlist
                 const productPayload = {
                     productId: item._id,
                     name: item.name,
-                    image: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/150', // Fallback
+                    image: item.images?.[0] || 'https://via.placeholder.com/150',
                     price: item.price
                 };
                 await fetch(`${API_BASE_URL}/wishlist/add`, {
@@ -157,42 +253,44 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
                     body: JSON.stringify({ userId, product: productPayload })
                 });
             } else {
-                // Remove from Wishlist
                 await fetch(`${API_BASE_URL}/wishlist/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId, productId: item._id })
                 });
             }
-
         } catch (error) {
             console.error("Like/Wishlist error", error);
-            // Revert on critical failure if needed, but for now log it.
         }
     };
 
-    // Double Tap Logic
-    const handleDoubleTap = () => {
+    const handlePress = () => {
         const now = Date.now();
         const DOUBLE_PRESS_DELAY = 300;
-        if (lastTap && (now - lastTap) < DOUBLE_PRESS_DELAY) {
+
+        if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
+            if (tapTimeout.current) clearTimeout(tapTimeout.current);
+            lastTap.current = null;
             if (!isLiked) toggleLike();
-            // Animate Big Heart
-            Animated.sequence([
-                Animated.spring(heartScale, { toValue: 1, useNativeDriver: true }),
-                Animated.timing(heartScale, { toValue: 0, duration: 100, delay: 500, useNativeDriver: true })
-            ]).start();
+            else {
+                Animated.sequence([
+                    Animated.spring(heartScale, { toValue: 1, useNativeDriver: true }),
+                    Animated.timing(heartScale, { toValue: 0, duration: 200, delay: 500, useNativeDriver: true })
+                ]).start();
+            }
         } else {
-            setLastTap(now);
+            lastTap.current = now;
+            tapTimeout.current = setTimeout(() => {
+                setManualPause(prev => !prev);
+                lastTap.current = null;
+            }, DOUBLE_PRESS_DELAY);
         }
     };
 
-    // Handle Comment
     const handleAddComment = async (text) => {
-        // Optimistic Add
         const newComment = {
             userId: userId,
-            userName: "You", // Placeholder until refresh
+            userName: "You", // This should ideally come from user's profile
             text: text,
             createdAt: new Date()
         };
@@ -204,9 +302,8 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, text })
             });
-            const data = await res.json();
             if (res.ok) {
-                // Update with server data (real username etc)
+                const data = await res.json();
                 setComments(data.comments);
             }
         } catch (error) {
@@ -214,11 +311,10 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
         }
     };
 
-    // Handle Share
     const handleShare = async () => {
         try {
             await Share.share({
-                message: `Check out this amazing product on Reel2Cart!\n${item.name} - ${formatPrice(item.price)}\n${item.videoUrl}`,
+                message: `${t('checkOut')}: ${item.name} - ${formatPrice(item.price)}\n${item.videoUrl}`,
             });
         } catch (error) {
             console.log(error);
@@ -226,7 +322,7 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
     };
 
     return (
-        <TouchableWithoutFeedback onPress={handleDoubleTap}>
+        <TouchableWithoutFeedback onPress={handlePress}>
             <View style={styles.reelContainer}>
                 <VideoView
                     style={styles.video}
@@ -235,124 +331,185 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
                     nativeControls={false}
                 />
 
-                {/* Big Heart Animation */}
-                <View style={styles.centerHeartContainer}>
+                {/* Animated Heart Overlay */}
+                <View style={styles.centerOverlay} pointerEvents="none">
                     <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                        <Ionicons name="heart" size={100} color="rgba(255,255,255,0.8)" />
+                        <Ionicons name="heart" size={100} color="rgba(255,255,255,0.9)" />
                     </Animated.View>
                 </View>
 
-                {/* Overlay Gradient */}
+                {/* Play/Pause Overlay */}
+                {manualPause && (
+                    <View style={styles.centerOverlay} pointerEvents="none">
+                        <View style={styles.playPauseBackdrop}>
+                            <Ionicons name="play" size={50} color="rgba(255,255,255,0.95)" style={{ marginLeft: 6 }} />
+                        </View>
+                    </View>
+                )}
+
+                {/* Gradients */}
                 <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.9)']}
-                    style={styles.gradient}
+                    colors={['rgba(0,0,0,0.5)', 'transparent']}
+                    style={styles.topGradient}
+                    pointerEvents="none"
+                />
+                <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.9)']}
+                    style={styles.bottomGradient}
+                    pointerEvents="none"
                 />
 
-                {/* Right Side Actions */}
-                <View style={styles.actionsContainer}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={toggleLike}>
-                        <Ionicons
-                            name={isLiked ? "heart" : "heart-outline"}
-                            size={35}
-                            color={isLiked ? "#E50914" : "#fff"}
-                        />
-                        <Text style={styles.actionLabel}>{likesCount}</Text>
-                    </TouchableOpacity>
+                {/* --- UI Content Wrapper --- */}
+                {/* Lifted up significantly to be 'responsive' and not 'too bottom' */}
+                <View style={[styles.contentWrapper, { paddingBottom: insets.bottom + 50 }]}>
 
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => setShowComments(true)}>
-                        <Ionicons name="chatbubble-ellipses-outline" size={32} color="#fff" />
-                        <Text style={styles.actionLabel}>{comments.length}</Text>
-                    </TouchableOpacity>
+                    {/* Left Side Info */}
+                    <View style={styles.leftColumn}>
 
-                    <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
-                        <Ionicons name="share-social-outline" size={32} color="#fff" />
-                        <Text style={styles.actionLabel}>Share</Text>
-                    </TouchableOpacity>
-
-                    {/* More option for wishlist/report could go here */}
-                </View>
-
-                {/* Bottom Info */}
-                <View style={styles.infoContainer}>
-                    <View style={styles.userRow}>
-                        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => item.sellerId?._id && navigation.navigate("SellerProfile", { sellerId: item.sellerId._id })}>
-                            <View style={[styles.avatar, item.sellerId?.profileImage ? { borderWidth: 0 } : {}]}>
-                                {item.sellerId?.profileImage ? (
-                                    <Image source={{ uri: item.sellerId.profileImage }} style={{ width: 32, height: 32, borderRadius: 16 }} />
-                                ) : (
-                                    <Text style={styles.avatarText}>
-                                        {(item.sellerId?.businessName || item.category || 'S').charAt(0).toUpperCase()}
-                                    </Text>
-                                )}
-                            </View>
-                            <Text style={styles.userName}>
-                                {item.sellerId?.businessName || `${item.category} Seller`}
-                            </Text>
-                        </TouchableOpacity>
+                        {/* User Profile */}
                         <TouchableOpacity
-                            style={styles.followButton}
+                            style={styles.profileRow}
                             onPress={() => item.sellerId?._id && navigation.navigate("SellerProfile", { sellerId: item.sellerId._id })}
                         >
-                            <Text style={styles.followText}>Follow</Text>
+                            <View style={styles.avatarBorder}>
+                                {item.sellerId?.profileImage ? (
+                                    <Image source={{ uri: item.sellerId.profileImage }} style={styles.profileImage} />
+                                ) : (
+                                    <View style={[styles.profileImage, styles.placeholderAvatar]}>
+                                        <Text style={styles.placeholderText}>
+                                            {(item.sellerId?.businessName || item.category || 'S').charAt(0).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                )}
+                                {/* Follow Badge (Optional) */}
+                                <View style={styles.followBadge}>
+                                    <Ionicons name="add" size={10} color="#fff" />
+                                </View>
+                            </View>
+                            <Text style={styles.username}>
+                                {item.sellerId?.businessName || `${item.category} Seller`}
+                            </Text>
+                            {String(item.sellerId?._id || item.sellerId) !== String(userId) && (
+                                <TouchableOpacity
+                                    style={[styles.followBtnSmall, isFollowing && styles.followingBtnSmall]}
+                                    onPress={handleFollow}
+                                >
+                                    <Text style={[styles.followBtnText, isFollowing && { color: '#334155' }]}>
+                                        {isFollowing ? t('following') : t('follow')}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </TouchableOpacity>
+
+                        {/* Description */}
+                        <View style={styles.textContainer}>
+                            <Text style={styles.itemTitle}>{item.name}</Text>
+                            {item.description && (
+                                <Text style={styles.itemDesc} numberOfLines={2}>
+                                    {item.description}
+                                </Text>
+                            )}
+                        </View>
+
+                        {/* Price & CTA */}
+                        <View style={styles.priceRow}>
+                            <View style={styles.pricePill}>
+                                <Text style={styles.mainPrice}>{formatPrice(item.price)}</Text>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.buyButton}
+                                onPress={async () => {
+                                    if (!userId) {
+                                        Alert.alert(
+                                            t('loginRequiredTitle'),
+                                            t('loginRequiredCart'),
+                                            [
+                                                { text: t('cancel'), style: 'cancel' },
+                                                { text: t('login'), onPress: () => navigation.navigate('Login') }
+                                            ]
+                                        );
+                                        return;
+                                    }
+                                    try {
+                                        const payload = {
+                                            userId: userId,
+                                            product: {
+                                                name: item.name,
+                                                price: item.price,
+                                                image: item.images?.[0] || 'https://via.placeholder.com/150',
+                                                quantity: 1,
+                                                productId: item._id
+                                            }
+                                        };
+                                        const res = await fetch(`${API_BASE_URL}/cart/add`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(payload)
+                                        });
+                                        const data = await res.json();
+                                        if (res.ok) {
+                                            showSuccess(t('addedToCartSuccess'));
+                                        } else {
+                                            showAlert(t('error'), data.message || t('failedAddToCart'));
+                                        }
+                                    } catch (err) {
+                                        console.error(err);
+                                        showAlert(t('error'), t('somethingWentWrong'));
+                                    }
+                                }}
+                            >
+                                <Text style={styles.buyButtonText}>{t('shopNow')}</Text>
+                                <Ionicons name="cart" size={16} color="#000" style={{ marginLeft: 4 }} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <TouchableOpacity onPress={() => navigation.navigate('ProductDetails', { product: item })}>
-                        <Text style={styles.description} numberOfLines={2}>
-                            <Text style={styles.productTitle}>{item.name} </Text>
-                            {item.description}
-                        </Text>
-                    </TouchableOpacity>
+                    {/* Right Side Actions */}
+                    <View style={styles.rightColumn}>
+                        <TouchableOpacity style={styles.iconButton} onPress={toggleLike}>
+                            <Ionicons
+                                name={isLiked ? "heart" : "heart-outline"}
+                                size={32}
+                                color={isLiked ? "#E50914" : "#fff"}
+                                style={styles.iconShadow}
+                            />
+                            <Text style={styles.iconLabel}>{likesCount}</Text>
+                        </TouchableOpacity>
 
-                    <View style={styles.priceTag}>
-                        <Ionicons name="pricetag" size={14} color="#fff" style={{ marginRight: 5 }} />
-                        <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
-                        <TouchableOpacity
-                            style={styles.shopNowBtn}
-                            onPress={async () => {
-                                if (!userId) {
-                                    alert("Please login to shop");
-                                    return;
-                                }
+                        <TouchableOpacity style={styles.iconButton} onPress={() => setShowComments(true)}>
+                            <Ionicons
+                                name="chatbubble-ellipses-outline"
+                                size={30}
+                                color="#fff"
+                                style={styles.iconShadow}
+                            />
+                            <Text style={styles.iconLabel}>{comments.length}</Text>
+                        </TouchableOpacity>
 
-                                try {
-                                    const payload = {
-                                        userId: userId,
-                                        product: {
-                                            name: item.name,
-                                            price: item.price,
-                                            image: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/150',
-                                            quantity: 1,
-                                            productId: item._id
-                                        }
-                                    };
+                        <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
+                            <Ionicons
+                                name="paper-plane-outline"
+                                size={30}
+                                color="#fff"
+                                style={styles.iconShadow}
+                            />
+                            <Text style={styles.iconLabel}>{t('shareLabel')}</Text>
+                        </TouchableOpacity>
 
-                                    const res = await fetch(`${API_BASE_URL}/cart/add`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(payload)
-                                    });
-
-                                    const data = await res.json();
-
-                                    if (res.ok) {
-                                        alert("Added to Cart Successfully!");
-                                    } else {
-                                        alert(data.message || "Failed to add to cart");
-                                    }
-                                } catch (error) {
-                                    console.error(error);
-                                    alert("Error adding to cart");
-                                }
-                            }}
-                        >
-                            <Text style={styles.shopNowText}>Shop Now</Text>
-                            <Ionicons name="chevron-forward" size={14} color="#000" />
+                        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate("ProductDetails", { product: item })}>
+                            <Ionicons
+                                name="ellipsis-horizontal-circle-outline"
+                                size={32}
+                                color="#fff"
+                                style={styles.iconShadow}
+                            />
+                            <Text style={styles.iconLabel}>{t('moreLabel')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* Comments Modal */}
+                {/* Comment Modal */}
                 <CommentModal
                     visible={showComments}
                     onClose={() => setShowComments(false)}
@@ -364,45 +521,48 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
     );
 };
 
+
+
+// ... (ReelItem component remains unchanged)
+
 // --- MAIN SCREEN ---
 const ReelsScreen = () => {
+    const { t } = useLanguage();
     const navigation = useNavigation();
-    const isScreenFocused = useIsFocused(); // Hook to check if screen is focused
+    const route = useRoute(); // Get route
+    const isScreenFocused = useIsFocused();
+    const insets = useSafeAreaInsets();
+    const flatListRef = useRef(null); // Ref for FlatList
+
+    // Params from navigation (e.g. from SellerProfile)
+    const { initialReels, initialIndex } = route.params || {};
+
     const [reels, setReels] = useState([]);
+    const [sourceReels, setSourceReels] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(initialIndex || 0);
     const [userId, setUserId] = useState(null);
 
-    // Get User ID
-    useEffect(() => {
-        const getUser = async () => {
-            const userStr = await AsyncStorage.getItem('userInfo');
-            if (userStr) setUserId(JSON.parse(userStr)._id);
-        };
-        getUser();
+    const ignoreInitialScroll = useRef(initialIndex > 0);
+
+    // Ensure unique keys for infinite loop
+    const addUniqueKeys = useCallback((list) => {
+        return list.map(item => ({
+            ...item,
+            _listId: Math.random().toString(36).substr(2, 9) + '-' + Date.now() + '-' + item._id
+        }));
     }, []);
 
-    const fetchReels = async () => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/products/reels`);
-            const data = await res.json();
-            if (res.ok) {
-                setReels(data);
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+    const handleLoadMore = () => {
+        if (sourceReels.length === 0) return;
+        const nextBatch = addUniqueKeys([...sourceReels]);
+        setReels(prev => [...prev, ...nextBatch]);
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            fetchReels();
-        }, [])
-    );
-
+    // Viewability Config
     const onViewableItemsChanged = useRef(({ viewableItems }) => {
+        if (ignoreInitialScroll.current) return;
+
         if (viewableItems.length > 0) {
             setActiveIndex(viewableItems[0].index);
         }
@@ -412,34 +572,114 @@ const ReelsScreen = () => {
         itemVisiblePercentThreshold: 50
     }).current;
 
-    if (loading) {
-        return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#E50914" />
-            </View>
-        );
-    }
+    useEffect(() => {
+        if (initialIndex > 0) {
+            const timer = setTimeout(() => {
+                ignoreInitialScroll.current = false;
+            }, 1200);
+            return () => clearTimeout(timer);
+        } else {
+            ignoreInitialScroll.current = false;
+        }
+    }, [initialIndex]);
 
-    if (reels.length === 0) {
+    useEffect(() => {
+        const loadUser = async () => {
+            try {
+                const userStr = await AsyncStorage.getItem('userInfo');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    setUserId(user._id);
+                } else {
+                    const id = await AsyncStorage.getItem('userId');
+                    if (id) setUserId(id);
+                }
+            } catch (e) {
+                console.error("Failed to load user info", e);
+            }
+        };
+        loadUser();
+    }, []);
+
+    useEffect(() => {
+        if (initialReels && initialReels.length > 0) {
+            setSourceReels(initialReels);
+            setReels(addUniqueKeys(initialReels));
+            setLoading(false);
+        } else {
+            console.log("Fetching default reels...");
+            fetch(`${API_BASE_URL}/products`)
+                .then(res => res.json())
+                .then(data => {
+                    const products = Array.isArray(data) ? data : (data.products || []);
+                    const videoProducts = products.filter(p => p.videoUrl);
+
+                    const shuffled = videoProducts.sort(() => Math.random() - 0.5);
+
+                    setSourceReels(shuffled);
+                    setReels(addUniqueKeys(shuffled));
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error("Error fetching reels:", err);
+                    setLoading(false);
+                });
+        }
+    }, [initialReels]);
+
+    // Sync active index if params change (handle stale screen case)
+    useEffect(() => {
+        if (initialIndex !== undefined && reels.length > 0) {
+            setActiveIndex(initialIndex);
+            if (flatListRef.current) {
+                setTimeout(() => {
+                    flatListRef.current.scrollToIndex({ index: initialIndex, animated: false });
+                }, 100);
+            }
+        }
+    }, [initialIndex, reels.length === 0]);
+
+    if (loading || reels.length === 0) {
         return (
-            <View style={styles.centered}>
-                <Ionicons name="videocam-off-outline" size={60} color="#555" />
-                <Text style={styles.emptyText}>No Reels Yet</Text>
-                <Text style={styles.subText}>Start scrolling to see products come to life.</Text>
+            <View style={styles.container}>
+                <View style={[styles.headerContainer, { top: insets.top + 10 }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={28} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+                <View style={[styles.centerContainer, { paddingTop: 100 }]}>
+                    <ActivityIndicator size="large" color="#fff" />
+                </View>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
+            {/* Custom Header with Back Button */}
+            <View style={[styles.headerContainer, { top: insets.top + 10 }]}>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={styles.backButton}
+                >
+                    <Ionicons name="chevron-back" size={28} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>{t('reelsTitle')}</Text>
+                <View style={{ width: 40 }} />
+            </View>
+
             <FlatList
+                ref={flatListRef}
+                key={`reels-list-${initialIndex}-${reels.length > 0 ? 'loaded' : 'loading'}`}
                 data={reels}
-                keyExtractor={(item) => item._id}
+                keyExtractor={(item) => item._listId}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={1}
                 renderItem={({ item, index }) => (
                     <ReelItem
                         item={item}
                         isActive={index === activeIndex}
-                        isScreenFocused={isScreenFocused} // Pass focus state
+                        isScreenFocused={isScreenFocused}
                         userId={userId}
                         navigation={navigation}
                     />
@@ -453,15 +693,22 @@ const ReelsScreen = () => {
                 windowSize={3}
                 snapToAlignment="start"
                 decelerationRate="fast"
-                snapToInterval={height} // Make sure full screen slide
+                snapToInterval={height}
+                disableIntervalMomentum={true}
+                initialScrollIndex={initialIndex || 0}
+                getItemLayout={(data, index) => ({
+                    length: height,
+                    offset: height * index,
+                    index,
+                })}
+                onScrollToIndexFailed={(info) => {
+                    const wait = new Promise(resolve => setTimeout(resolve, 500));
+                    wait.then(() => {
+                        flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
+                    });
+                }}
+                removeClippedSubviews={Platform.OS === 'android'} // Memory optimization
             />
-            {/* Header Overlay */}
-            <View style={styles.headerOverlay}>
-                <Text style={styles.headerTitle}>Reels</Text>
-                <TouchableOpacity onPress={() => fetchReels()}>
-                    <Ionicons name="refresh" size={24} color="#fff" />
-                </TouchableOpacity>
-            </View>
         </View>
     );
 };
@@ -473,7 +720,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
-    centered: {
+    centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
@@ -482,159 +729,250 @@ const styles = StyleSheet.create({
     reelContainer: {
         width: width,
         height: height,
-        justifyContent: 'center',
         backgroundColor: '#000',
-        position: 'relative',
+        justifyContent: 'center',
     },
     video: {
         width: '100%',
         height: '100%',
         position: 'absolute',
     },
-    centerHeartContainer: {
+    centerOverlay: {
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 10,
     },
-    gradient: {
+    playPauseBackdrop: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backdropFilter: 'blur(5px)', // Works on some versions
+    },
+    topGradient: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: 150,
+        zIndex: 5,
+    },
+    bottomGradient: {
         position: 'absolute',
         left: 0, right: 0, bottom: 0,
-        height: '40%',
+        height: 350,
+        zIndex: 5,
     },
-    headerOverlay: {
+
+    // Header
+    headerContainer: {
         position: 'absolute',
-        top: 40,
-        left: 20,
-        right: 20,
+        left: 0, right: 0,
+        zIndex: 50,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        zIndex: 20,
+        paddingHorizontal: 20,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'flex-start'
     },
     headerTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
         color: '#fff',
+        fontSize: 18,
+        fontWeight: '700',
         textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 3,
+        textShadowRadius: 4,
+        textShadowOffset: { width: 0, height: 1 }
     },
 
-    // Actions (Right Side)
-    actionsContainer: {
+    // Main Content Overlay Logic
+    contentWrapper: {
         position: 'absolute',
-        right: 10,
-        bottom: 150, // Above bottom tab
-        alignItems: 'center',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 16,
+        // The paddingBottom is dynamically set in code + insets
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
         zIndex: 20,
     },
-    actionBtn: {
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    actionLabel: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
-        marginTop: 5,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 2,
-    },
-
-    // Info (Bottom Left)
-    infoContainer: {
-        position: 'absolute',
-        left: 15,
-        right: 80, // Space for right actions
-        bottom: 80, // Space for bottom tab
+    leftColumn: {
+        flex: 1,
+        marginRight: 60, // Space for right actions
         justifyContent: 'flex-end',
-        zIndex: 20,
+        paddingBottom: 10,
     },
-    userRow: {
+    rightColumn: {
+        width: 50,
+        alignItems: 'center',
+        paddingBottom: 20,
+    },
+
+    // User Profile in Left Column
+    profileRow: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 10,
     },
-    avatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#E50914',
+    avatarBorder: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        borderWidth: 1.5,
+        borderColor: '#fff',
+        marginRight: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 8,
-        borderWidth: 1,
-        borderColor: '#fff',
+        position: 'relative'
     },
-    avatarText: {
+    profileImage: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+    },
+    placeholderAvatar: {
+        backgroundColor: '#E50914',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    placeholderText: {
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 14,
     },
-    userName: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 14,
-        marginRight: 10,
-    },
-    followButton: {
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.6)',
-        borderRadius: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-    },
-    followText: {
-        color: '#fff',
-        fontSize: 11,
-        fontWeight: '600',
-    },
-    description: {
-        color: 'rgba(255,255,255,0.9)',
-        fontSize: 14,
-        marginBottom: 10,
-        lineHeight: 20,
-    },
-    productTitle: {
-        fontWeight: 'bold',
-        fontSize: 15,
-    },
-    priceTag: {
-        flexDirection: 'row',
+    followBadge: {
+        position: 'absolute',
+        bottom: -2,
+        right: -2,
+        backgroundColor: '#E50914',
+        borderRadius: 8,
+        width: 16,
+        height: 16,
+        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        alignSelf: 'flex-start',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: '#fff'
     },
-    priceText: {
+    username: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '700',
         fontSize: 16,
         marginRight: 10,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowRadius: 3,
+        textShadowOffset: { width: 0, height: 1 }
     },
-    shopNowBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        paddingVertical: 2,
+    followBtnSmall: {
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 6,
         paddingHorizontal: 8,
-        borderRadius: 12,
+        paddingVertical: 3,
     },
-    shopNowText: {
-        color: '#000',
-        fontSize: 11,
-        fontWeight: 'bold',
-        marginRight: 2,
+    followingBtnSmall: {
+        backgroundColor: '#fff',
+        borderColor: '#fff',
+    },
+    followBtnText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '600'
     },
 
-    // Modal Styles
+    // Description
+    textContainer: {
+        marginBottom: 12,
+    },
+    itemTitle: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '700',
+        marginBottom: 4,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowRadius: 3,
+        textShadowOffset: { width: 0, height: 1 }
+    },
+    itemDesc: {
+        color: '#e0e0e0',
+        fontSize: 13,
+        lineHeight: 18,
+    },
+
+    // Price & CTA
+    priceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    pricePill: {
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        marginRight: 10
+    },
+    mainPrice: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 16,
+    },
+    buyButton: {
+        backgroundColor: '#fff',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 4
+    },
+    buyButtonText: {
+        color: '#000',
+        fontWeight: '700',
+        fontSize: 13,
+    },
+
+    // Right Icons
+    iconButton: {
+        alignItems: 'center',
+        marginBottom: 22,
+    },
+    iconShadow: {
+        shadowColor: '#000',
+        shadowOpacity: 0.4,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 1 }
+    },
+    iconLabel: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '500',
+        marginTop: 4,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowRadius: 3,
+        textShadowOffset: { width: 0, height: 1 }
+    },
+
+    // Empty/Loading
+    emptyText: {
+        color: '#fff',
+        fontSize: 16,
+        marginTop: 15,
+        fontWeight: '600'
+    },
+
+    // Modal
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -666,54 +1004,31 @@ const styles = StyleSheet.create({
         borderBottomColor: '#eee',
         paddingBottom: 10,
     },
-    commentList: {
-        flex: 1,
-    },
+    commentList: { flex: 1 },
     commentItem: {
         flexDirection: 'row',
         marginBottom: 15,
     },
     commentAvatar: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: '#eee',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 10,
     },
-    commentAvatarText: {
-        fontWeight: 'bold',
-        color: '#555',
-    },
+    commentAvatarText: { fontWeight: 'bold', color: '#555' },
     commentTextContent: {
         flex: 1,
         backgroundColor: '#f5f5f5',
-        padding: 10,
+        padding: 8,
         borderRadius: 12,
-        borderTopLeftRadius: 2,
     },
-    commentUser: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 2,
-    },
-    commentText: {
-        fontSize: 14,
-        color: '#444',
-        marginBottom: 4,
-    },
-    commentTime: {
-        fontSize: 10,
-        color: '#888',
-        alignSelf: 'flex-end',
-    },
-    noComments: {
-        textAlign: 'center',
-        color: '#888',
-        marginTop: 20,
-    },
+    commentUser: { fontSize: 12, fontWeight: 'bold', color: '#333' },
+    commentText: { fontSize: 14, color: '#444' },
+    commentTime: { fontSize: 10, color: '#888', alignSelf: 'flex-end' },
+    noComments: { textAlign: 'center', color: '#888', marginTop: 20 },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -730,9 +1045,5 @@ const styles = StyleSheet.create({
         marginRight: 10,
         color: '#333',
     },
-    postText: {
-        color: '#007AFF',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
+    postText: { color: '#E50914', fontWeight: 'bold', fontSize: 16 },
 });

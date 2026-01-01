@@ -1,38 +1,45 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Linking, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Linking, LayoutAnimation, Platform, UIManager, TouchableOpacity, StatusBar } from 'react-native';
 import AnimatedButton from '../components/AnimatedButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { wp, hp, normalize } from '../utils/responsive';
+import { useLanguage } from '../context/LanguageContext';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    // UIManager.setLayoutAnimationEnabledExperimental is a no-op in new architecture
+}
 
-
-const FAQS = [
+const getFaqs = (t) => [
     {
-        question: "Where is my order?",
-        answer: "You can track your order status in the 'Orders' section. We also send SMS and email updates at every step."
+        question: t('faq1Q'),
+        answer: t('faq1A')
     },
     {
-        question: "How do I return an item?",
-        answer: "Go to 'Orders', select the item, and tap 'Return/Replace'. Ensure the product is unused and tags are intact."
+        question: t('faq2Q'),
+        answer: t('faq2A')
     },
     {
-        question: "When will I get my refund?",
-        answer: "Refunds are processed within 5-7 business days after we receive the returned item. It will be credited to your original payment method."
+        question: t('faq3Q'),
+        answer: t('faq3A')
     },
     {
-        question: "How can I change my delivery address?",
-        answer: "You can change the address before the order is shipped from the 'My Orders' section. Once shipped, address changes may not be possible."
+        question: t('faq4Q'),
+        answer: t('faq4A')
     },
     {
-        question: "I received a damaged product.",
-        answer: "We apologize for this! Please report it within 24 hours of delivery via 'My Orders' > 'Return' > 'Damaged Item' to get a replacement."
+        question: t('faq5Q'),
+        answer: t('faq5A')
     }
 ];
 
 const HelpScreen = ({ navigation }) => {
+    const { t } = useLanguage();
     const [search, setSearch] = useState('');
     const [expandedIndex, setExpandedIndex] = useState(null);
+
+    const FAQS = getFaqs(t);
 
     const toggleFAQ = (index) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -40,267 +47,388 @@ const HelpScreen = ({ navigation }) => {
     };
 
     const handleContact = (type) => {
-        if (type === 'email') Linking.openURL('mailto:reel2cart2025@gmail.com');
-        if (type === 'call') Linking.openURL('tel:1800123456');
-        if (type === 'chat') alert("Live Chat connecting...");
+        if (type === 'chat') {
+            navigation.navigate('AIChat');
+        } else if (type === 'email') {
+            Linking.openURL('mailto:shopflix2025@gmail.com');
+        } else if (type === 'call') {
+            Linking.openURL('tel:+919345413178');
+        }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <LinearGradient colors={['#131921', '#232f3e']} style={styles.header}>
-                <View style={styles.headerRow}>
-                    <AnimatedButton onPress={() => {
-                        if (navigation.canGoBack()) navigation.goBack();
-                        else navigation.navigate('Home');
-                    }}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </AnimatedButton>
-                    <Text style={styles.headerTitle}>Help Center</Text>
-                    <View style={{ width: 24 }} />
-                </View>
+        <LinearGradient
+            colors={['#F9F9FF', '#F3E5F5', '#E1F5FE']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+        >
+            <SafeAreaView style={styles.container}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-                <Text style={styles.greeting}>How can we help you?</Text>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={styles.floatingBackButton}
+                >
+                    <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
+                </TouchableOpacity>
 
-                <View style={styles.searchContainer}>
-                    <Ionicons name="search" size={20} color="#666" style={{ marginRight: 10 }} />
-                    <TextInput
-                        placeholder="Search for issues..."
-                        placeholderTextColor="#999"
-                        style={styles.searchInput}
-                        value={search}
-                        onChangeText={setSearch}
-                    />
-                </View>
-            </LinearGradient>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                    {/* Hero Section */}
+                    <View style={styles.heroSection}>
+                        <Text style={styles.heroPreTitle}>{t('support')}</Text>
+                        <Text style={styles.heroTitle}>{t('howCanWeHelp')}</Text>
 
-                {/* Support Options */}
-                <View style={styles.supportGrid}>
-                    <AnimatedButton style={styles.supportCard} onPress={() => navigation.navigate('Orders')}>
-                        <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
-                            <MaterialIcons name="local-shipping" size={28} color="#2196F3" />
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={normalize(20)} color="#888" style={styles.searchIcon} />
+                            <TextInput
+                                placeholder={t('searchHelp')}
+                                placeholderTextColor="#999"
+                                style={styles.searchInput}
+                                value={search}
+                                onChangeText={setSearch}
+                            />
                         </View>
-                        <Text style={styles.supportLabel}>My Orders</Text>
-                    </AnimatedButton>
+                    </View>
 
-                    <AnimatedButton style={styles.supportCard}>
-                        <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
-                            <MaterialIcons name="assignment-return" size={28} color="#4CAF50" />
-                        </View>
-                        <Text style={styles.supportLabel}>Returns</Text>
-                    </AnimatedButton>
-
-                    <AnimatedButton style={styles.supportCard} onPress={() => navigation.navigate('PaymentMethod')}>
-                        <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
-                            <MaterialIcons name="payment" size={28} color="#FF9800" />
-                        </View>
-                        <Text style={styles.supportLabel}>Payment</Text>
-                    </AnimatedButton>
-
-                    <AnimatedButton style={styles.supportCard} onPress={() => navigation.navigate('EditProfile')}>
-                        <View style={[styles.iconBox, { backgroundColor: '#F3E5F5' }]}>
-                            <MaterialIcons name="person" size={28} color="#9C27B0" />
-                        </View>
-                        <Text style={styles.supportLabel}>Account</Text>
-                    </AnimatedButton>
-                </View>
-
-                {/* FAQ Section */}
-                <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
-                <View style={styles.faqList}>
-                    {FAQS.filter(f => f.question.toLowerCase().includes(search.toLowerCase())).map((faq, index) => (
-                        <View key={index} style={styles.faqItem}>
-                            <AnimatedButton style={styles.faqHeader} onPress={() => toggleFAQ(index)}>
-                                <Text style={styles.faqQuestion}>{faq.question}</Text>
-                                <Ionicons name={expandedIndex === index ? "chevron-up" : "chevron-down"} size={20} color="#666" />
-                            </AnimatedButton>
-                            {expandedIndex === index && (
-                                <View style={styles.faqBody}>
-                                    <Text style={styles.faqAnswer}>{faq.answer}</Text>
+                    {/* Quick Access Grid - Large Cards */}
+                    <View style={styles.gridContainer}>
+                        <AnimatedButton style={styles.largeCard} onPress={() => navigation.navigate('Orders')}>
+                            <LinearGradient colors={['#E3F2FD', '#FFFFFF']} style={styles.cardGradient}>
+                                <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
+                                    <Feather name="package" size={normalize(28)} color="#2196F3" />
                                 </View>
-                            )}
-                        </View>
-                    ))}
-                </View>
+                                <View>
+                                    <Text style={styles.cardTitle}>{t('myOrders')}</Text>
+                                    <Text style={styles.cardSub}>{t('trackManage')}</Text>
+                                </View>
+                            </LinearGradient>
+                        </AnimatedButton>
 
-                {/* Contact Us */}
-                <Text style={styles.sectionTitle}>Still need help?</Text>
-                <View style={styles.contactContainer}>
-                    <AnimatedButton style={styles.contactItem} onPress={() => handleContact('chat')}>
-                        <Ionicons name="chatbubbles-outline" size={24} color="#E50914" />
-                        <View style={styles.contactText}>
-                            <Text style={styles.contactTitle}>Chat with us</Text>
-                            <Text style={styles.contactSub}>Instant support</Text>
-                        </View>
-                    </AnimatedButton>
+                        <AnimatedButton style={styles.largeCard} onPress={() => navigation.navigate('Orders')}>
+                            <LinearGradient colors={['#E8F5E9', '#FFFFFF']} style={styles.cardGradient}>
+                                <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
+                                    <Feather name="refresh-cw" size={normalize(28)} color="#4CAF50" />
+                                </View>
+                                <View>
+                                    <Text style={styles.cardTitle}>{t('returns')}</Text>
+                                    <Text style={styles.cardSub}>{t('refundStatus')}</Text>
+                                </View>
+                            </LinearGradient>
+                        </AnimatedButton>
 
-                    <View style={styles.divider} />
+                        <AnimatedButton style={styles.largeCard} onPress={() => navigation.navigate('PaymentMethod')}>
+                            <LinearGradient colors={['#FFF3E0', '#FFFFFF']} style={styles.cardGradient}>
+                                <View style={[styles.iconBox, { backgroundColor: '#FFF3E0' }]}>
+                                    <Feather name="credit-card" size={normalize(28)} color="#FF9800" />
+                                </View>
+                                <View>
+                                    <Text style={styles.cardTitle}>{t('payments')}</Text>
+                                    <Text style={styles.cardSub}>{t('methodsHistory')}</Text>
+                                </View>
+                            </LinearGradient>
+                        </AnimatedButton>
 
-                    <AnimatedButton style={styles.contactItem} onPress={() => handleContact('call')}>
-                        <Ionicons name="call-outline" size={24} color="#E50914" />
-                        <View style={styles.contactText}>
-                            <Text style={styles.contactTitle}>Call us</Text>
-                            <Text style={styles.contactSub}>1800-123-456</Text>
-                        </View>
-                    </AnimatedButton>
+                        <AnimatedButton style={styles.largeCard} onPress={() => navigation.navigate('EditProfile')}>
+                            <LinearGradient colors={['#F3E5F5', '#FFFFFF']} style={styles.cardGradient}>
+                                <View style={[styles.iconBox, { backgroundColor: '#F3E5F5' }]}>
+                                    <Feather name="user" size={normalize(28)} color="#9C27B0" />
+                                </View>
+                                <View>
+                                    <Text style={styles.cardTitle}>{t('accountSettings')}</Text>
+                                    <Text style={styles.cardSub}>{t('profileSettings')}</Text>
+                                </View>
+                            </LinearGradient>
+                        </AnimatedButton>
+                    </View>
 
-                    <View style={styles.divider} />
+                    {/* FAQ Surface */}
+                    <Text style={styles.sectionTitle}>{t('faq')}</Text>
+                    <View style={styles.faqSurface}>
+                        {FAQS.filter(f => f.question.toLowerCase().includes(search.toLowerCase())).map((faq, index, arr) => (
+                            <View key={index}>
+                                <TouchableOpacity style={styles.faqItem} onPress={() => toggleFAQ(index)}>
+                                    <View style={styles.faqRow}>
+                                        <Text style={[styles.faqQuestion, expandedIndex === index && styles.faqQuestionActive]}>
+                                            {faq.question}
+                                        </Text>
+                                        <Ionicons
+                                            name={expandedIndex === index ? "chevron-up" : "chevron-down"}
+                                            size={normalize(18)}
+                                            color="#999"
+                                        />
+                                    </View>
+                                    {expandedIndex === index && (
+                                        <Text style={styles.faqAnswer}>{faq.answer}</Text>
+                                    )}
+                                </TouchableOpacity>
+                                {index < arr.length - 1 && <View style={styles.divider} />}
+                            </View>
+                        ))}
+                    </View>
 
-                    <AnimatedButton style={styles.contactItem} onPress={() => handleContact('email')}>
-                        <Ionicons name="mail-outline" size={24} color="#E50914" />
-                        <View style={styles.contactText}>
-                            <Text style={styles.contactTitle}>Email us</Text>
-                            <Text style={styles.contactSub}>Get response in 24h</Text>
-                        </View>
-                    </AnimatedButton>
-                </View>
+                    {/* Contact Section */}
+                    <Text style={[styles.sectionTitle, { marginTop: hp(4) }]}>{t('contactSupport')}</Text>
 
-            </ScrollView>
-        </SafeAreaView>
+                    <TouchableOpacity
+                        style={styles.primaryButton}
+                        activeOpacity={0.9}
+                        onPress={() => handleContact('chat')}
+                    >
+                        <LinearGradient
+                            colors={['#ff3a3aff', '#d13434ff']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.primaryButtonGradient}
+                        >
+                            <View style={styles.btnContent}>
+                                <Ionicons name="chatbubbles" size={normalize(24)} color="#fff" style={{ marginRight: 10 }} />
+                                <Text style={styles.primaryBtnText}>{t('chatWithAi')}</Text>
+                            </View>
+                            <View style={styles.onlineBadge}>
+                                <View style={styles.dot} />
+                                <Text style={styles.onlineText}>{t('online')}</Text>
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <View style={styles.secondaryRow}>
+                        <TouchableOpacity style={styles.outlineBtn} onPress={() => handleContact('email')}>
+                            <Ionicons name="mail-outline" size={normalize(20)} color="#333" />
+                            <Text style={styles.outlineBtnText}>{t('email')}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.outlineBtn} onPress={() => handleContact('call')}>
+                            <Ionicons name="call-outline" size={normalize(20)} color="#333" />
+                            <Text style={styles.outlineBtnText}>{t('call')}</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={{ height: hp(5) }} />
+
+                </ScrollView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
+    gradientContainer: { flex: 1 },
+    container: { flex: 1 },
+    floatingBackButton: {
+        position: 'absolute',
+        top: hp(5),
+        left: wp(5),
+        zIndex: 10,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        borderRadius: 50,
+        padding: 8,
+        elevation: 2,
     },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 25,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+    content: {
+        paddingTop: hp(12), // Space for back button
+        paddingHorizontal: wp(6),
+        paddingBottom: hp(5),
     },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
+    heroSection: {
+        marginBottom: hp(4),
     },
-    headerTitle: {
-        fontSize: 18,
-        color: '#fff',
-        fontWeight: 'bold',
+    heroPreTitle: {
+        fontSize: normalize(14),
+        textTransform: 'uppercase',
+        letterSpacing: 1.5,
+        color: '#666',
+        marginBottom: 5,
+        fontWeight: '600',
     },
-    greeting: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 15,
+    heroTitle: {
+        fontSize: normalize(32),
+        fontWeight: '800',
+        color: '#1a1a1a',
+        marginBottom: hp(3),
+        letterSpacing: -0.5,
     },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#fff',
-        borderRadius: 12,
-        paddingHorizontal: 15,
-        height: 50,
+        borderRadius: 20,
+        paddingHorizontal: wp(5),
+        height: hp(7),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
+        elevation: 5,
+    },
+    searchIcon: {
+        marginRight: wp(3),
     },
     searchInput: {
         flex: 1,
-        fontSize: 16,
+        fontSize: normalize(16),
+        fontWeight: '500',
         color: '#333',
     },
-    content: {
-        padding: 20,
-    },
-    supportGrid: {
+    gridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        marginBottom: 30,
+        marginBottom: hp(4),
     },
-    supportCard: {
+    largeCard: {
         width: '48%',
-        backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 12,
-        alignItems: 'center',
-        marginBottom: 15,
-        elevation: 2,
+        marginBottom: hp(2),
+        borderRadius: 24,
+        overflow: 'hidden',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    cardGradient: {
+        padding: wp(4.5),
+        height: hp(18),
+        justifyContent: 'space-between',
     },
     iconBox: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 48,
+        height: 48,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
     },
-    supportLabel: {
-        fontWeight: '600',
+    cardTitle: {
+        fontSize: normalize(16),
+        fontWeight: '700',
         color: '#333',
+        marginBottom: 2,
+    },
+    cardSub: {
+        fontSize: normalize(13),
+        color: '#888',
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
-        marginLeft: 5,
+        fontSize: normalize(20),
+        fontWeight: '700',
+        color: '#1a1a1a',
+        marginBottom: hp(2),
+        marginLeft: 4,
     },
-    faqList: {
-        marginBottom: 30,
+    faqSurface: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        paddingVertical: hp(1),
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
     },
     faqItem: {
-        backgroundColor: '#fff',
-        marginBottom: 10,
-        borderRadius: 10,
-        overflow: 'hidden',
-        elevation: 1,
+        paddingVertical: hp(2.5),
+        paddingHorizontal: wp(5),
     },
-    faqHeader: {
+    faqRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 15,
     },
     faqQuestion: {
-        fontSize: 15,
+        fontSize: normalize(15),
         fontWeight: '500',
         color: '#333',
         flex: 1,
         marginRight: 10,
     },
-    faqBody: {
-        padding: 15,
-        paddingTop: 0,
-        backgroundColor: '#fafafa',
+    faqQuestionActive: {
+        fontWeight: '600',
+        color: '#000',
     },
     faqAnswer: {
+        marginTop: hp(1.5),
+        fontSize: normalize(14),
         color: '#666',
-        lineHeight: 20,
-    },
-    contactContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 5,
-        elevation: 2,
-        marginBottom: 30,
-    },
-    contactItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
-    },
-    contactText: {
-        marginLeft: 15,
-    },
-    contactTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-    },
-    contactSub: {
-        color: '#999',
-        fontSize: 12,
+        lineHeight: normalize(22),
     },
     divider: {
         height: 1,
         backgroundColor: '#f0f0f0',
-        marginLeft: 54,
+        marginHorizontal: wp(5),
+    },
+    primaryButton: {
+        marginBottom: hp(2),
+        borderRadius: 20,
+        overflow: 'hidden',
+        shadowColor: "#ff0000ff",
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    primaryButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: hp(2.5),
+        paddingHorizontal: wp(6),
+    },
+    btnContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    primaryBtnText: {
+        color: '#fff',
+        fontSize: normalize(17),
+        fontWeight: '700',
+    },
+    onlineBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#4CAF50',
+        marginRight: 4,
+    },
+    onlineText: {
+        color: '#fff',
+        fontSize: normalize(12),
+        fontWeight: '600',
+    },
+    secondaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    outlineBtn: {
+        width: '48%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: hp(2),
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#eee',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 1,
+    },
+    outlineBtnText: {
+        marginLeft: 8,
+        fontSize: normalize(15),
+        fontWeight: '600',
+        color: '#333',
     }
 });
 

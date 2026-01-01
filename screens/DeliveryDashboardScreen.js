@@ -1,14 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image, Alert, Modal, TextInput, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image, Alert, Modal, TextInput, ScrollView, Switch, StatusBar, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
+import { useCurrency } from '../context/CurrencyContext';
 import { normalize, wp, hp } from '../utils/responsive';
-import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const DeliveryDashboardScreen = ({ navigation }) => {
+    const { formatPrice } = useCurrency();
+
     // State
     const [userInfo, setUserInfo] = useState(null);
     const [partnerStatus, setPartnerStatus] = useState(null); // 'unregistered', 'pending', 'approved'
@@ -62,11 +65,11 @@ const DeliveryDashboardScreen = ({ navigation }) => {
     );
 
     // 2. Fetch Orders (Only if Approved)
-    const fetchOrders = async () => {
+    const fetchOrders = async (silent = false) => {
         if (partnerStatus !== 'approved' || !userInfo) return;
 
         try {
-            setRefreshing(true);
+            if (!silent) setRefreshing(true);
             let url = '';
             if (activeTab === 'available') {
                 url = `${API_BASE_URL}/delivery/available`;
@@ -83,7 +86,7 @@ const DeliveryDashboardScreen = ({ navigation }) => {
         } catch (error) {
             console.error("Error fetching jobs:", error);
         } finally {
-            setRefreshing(false);
+            if (!silent) setRefreshing(false);
         }
     };
 
@@ -92,6 +95,17 @@ const DeliveryDashboardScreen = ({ navigation }) => {
             fetchOrders();
         }
     }, [partnerStatus, activeTab]);
+
+    // Realtime Polling
+    useEffect(() => {
+        let interval;
+        if (partnerStatus === 'approved' && isOnline) {
+            interval = setInterval(() => {
+                fetchOrders(true);
+            }, 10000); // Poll every 10 seconds
+        }
+        return () => clearInterval(interval);
+    }, [partnerStatus, isOnline, activeTab]);
 
     // Actions
     const handleRegister = async () => {
@@ -207,65 +221,69 @@ const DeliveryDashboardScreen = ({ navigation }) => {
 
     const renderRegistration = () => (
         <ScrollView contentContainerStyle={styles.regContainer}>
-            <Image
-                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png' }}
-                style={styles.regImage}
-            />
-            <Text style={styles.regTitle}>Become a Delivery Partner</Text>
-            <Text style={styles.regSubtitle}>Join our fleet, deliver smiles, and earn money on your own schedule.</Text>
+            <View style={styles.glassCard}>
+                <Image
+                    source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2830/2830305.png' }}
+                    style={styles.regImage}
+                />
+                <Text style={styles.regTitle}>Become a Delivery Partner</Text>
+                <Text style={styles.regSubtitle}>Join our fleet, deliver smiles, and earn money on your own schedule.</Text>
 
-            <View style={styles.formContainer}>
-                <Text style={styles.inputLabel}>Vehicle Type</Text>
-                <View style={styles.vehicleOptions}>
-                    {['bike', 'scooter', 'truck'].map((type) => (
-                        <TouchableOpacity
-                            key={type}
-                            style={[styles.vehicleBtn, vehicleType === type && styles.vehicleBtnActive]}
-                            onPress={() => setVehicleType(type)}
-                        >
-                            <Ionicons
-                                name={type === 'truck' ? 'bus' : 'bicycle'}
-                                size={24}
-                                color={vehicleType === type ? '#fff' : '#555'}
-                            />
-                            <Text style={[styles.vehicleText, vehicleType === type && styles.vehicleTextActive]}>{type.toUpperCase()}</Text>
-                        </TouchableOpacity>
-                    ))}
+                <View style={styles.formContainer}>
+                    <Text style={styles.inputLabel}>Vehicle Type</Text>
+                    <View style={styles.vehicleOptions}>
+                        {['bike', 'scooter', 'truck'].map((type) => (
+                            <TouchableOpacity
+                                key={type}
+                                style={[styles.vehicleBtn, vehicleType === type && styles.vehicleBtnActive]}
+                                onPress={() => setVehicleType(type)}
+                            >
+                                <Ionicons
+                                    name={type === 'truck' ? 'bus' : 'bicycle'}
+                                    size={normalize(24)}
+                                    color={vehicleType === type ? '#fff' : '#555'}
+                                />
+                                <Text style={[styles.vehicleText, vehicleType === type && styles.vehicleTextActive]}>{type.toUpperCase()}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    <Text style={styles.inputLabel}>Driver's License Number</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter License No."
+                        value={licenseNumber}
+                        onChangeText={setLicenseNumber}
+                    />
+
+                    <Text style={styles.inputLabel}>Vehicle Plate Number</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Eg. TN-01-AB-1234"
+                        value={vehiclePlate}
+                        onChangeText={setVehiclePlate}
+                    />
+
+                    <TouchableOpacity style={styles.submitBtn} onPress={handleRegister}>
+                        <Text style={styles.submitBtnText}>Submit Application</Text>
+                    </TouchableOpacity>
                 </View>
-
-                <Text style={styles.inputLabel}>Driver's License Number</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter License No."
-                    value={licenseNumber}
-                    onChangeText={setLicenseNumber}
-                />
-
-                <Text style={styles.inputLabel}>Vehicle Plate Number</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Eg. TN-01-AB-1234"
-                    value={vehiclePlate}
-                    onChangeText={setVehiclePlate}
-                />
-
-                <TouchableOpacity style={styles.submitBtn} onPress={handleRegister}>
-                    <Text style={styles.submitBtnText}>Submit Application</Text>
-                </TouchableOpacity>
             </View>
         </ScrollView>
     );
 
     const renderPending = () => (
         <View style={styles.centerContainer}>
-            <MaterialIcons name="pending-actions" size={80} color="#FF9800" />
-            <Text style={styles.pendingTitle}>Verification in Progress</Text>
-            <Text style={styles.pendingText}>
-                We are currently reviewing your documents.{'\n'}This typically takes 24-48 hours.
-            </Text>
-            <TouchableOpacity style={styles.refreshBtn} onPress={checkStatus}>
-                <Text style={styles.refreshText}>Check Status</Text>
-            </TouchableOpacity>
+            <View style={styles.glassCard}>
+                <MaterialIcons name="pending-actions" size={normalize(80)} color="#FF9800" />
+                <Text style={styles.pendingTitle}>Verification in Progress</Text>
+                <Text style={styles.pendingText}>
+                    We are currently reviewing your documents.{'\n'}This typically takes 24-48 hours.
+                </Text>
+                <TouchableOpacity style={styles.refreshBtn} onPress={checkStatus}>
+                    <Text style={styles.refreshText}>Check Status</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
@@ -292,11 +310,11 @@ const DeliveryDashboardScreen = ({ navigation }) => {
                     <Text style={styles.statNum}>{partnerData?.totalDeliveries || 0}</Text>
                     <Text style={styles.statLabel}>Deliveries</Text>
                 </View>
-                <View style={[styles.statBox, { borderLeftWidth: 1, borderLeftColor: '#eee' }]}>
-                    <Text style={styles.statNum}>₹{partnerData?.earnings || 0}</Text>
+                <View style={[styles.statBox, { borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.05)' }]}>
+                    <Text style={styles.statNum}>{formatPrice(partnerData?.earnings || 0)}</Text>
                     <Text style={styles.statLabel}>Earnings</Text>
                 </View>
-                <View style={[styles.statBox, { borderLeftWidth: 1, borderLeftColor: '#eee' }]}>
+                <View style={[styles.statBox, { borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.05)' }]}>
                     <Text style={styles.statNum}>{partnerData?.rating || 5.0} ★</Text>
                     <Text style={styles.statLabel}>Rating</Text>
                 </View>
@@ -338,7 +356,7 @@ const DeliveryDashboardScreen = ({ navigation }) => {
                 />
             ) : (
                 <View style={styles.offlineContainer}>
-                    <MaterialCommunityIcons name="sleep" size={60} color="#ccc" />
+                    <MaterialCommunityIcons name="sleep" size={normalize(60)} color="#ccc" />
                     <Text style={styles.offlineText}>You are Offline</Text>
                     <Text style={styles.offlineSubText}>Go online to start receiving delivery requests.</Text>
                 </View>
@@ -359,7 +377,7 @@ const DeliveryDashboardScreen = ({ navigation }) => {
 
             <View style={styles.addressContainer}>
                 <View style={styles.locationRow}>
-                    <Ionicons name="location" size={20} color="#E50914" />
+                    <Ionicons name="location" size={normalize(20)} color="#E50914" />
                     <View style={styles.locationText}>
                         <Text style={styles.customerName}>{item.userId?.name || 'Customer'}</Text>
                         <Text style={styles.address}>
@@ -395,7 +413,7 @@ const DeliveryDashboardScreen = ({ navigation }) => {
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.mapBtn} onPress={() => Alert.alert("Navigation", "Opening Maps...")}>
-                            <Ionicons name="navigate-circle" size={32} color="#2196F3" />
+                            <Ionicons name="navigate-circle" size={normalize(32)} color="#2196F3" />
                         </TouchableOpacity>
                     </>
                 )}
@@ -404,140 +422,195 @@ const DeliveryDashboardScreen = ({ navigation }) => {
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Delivery Partner Hub</Text>
-                <View style={{ width: 24 }} />
-            </View>
-
-            {loading ? (
-                <View style={styles.centerContainer}><Text>Loading...</Text></View>
-            ) : (
-                <>
-                    {partnerStatus === 'unregistered' && renderRegistration()}
-                    {partnerStatus === 'pending' && renderPending()}
-                    {partnerStatus === 'approved' && renderDashboard()}
-                </>
-            )}
-
-            {/* OTP Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Complete Delivery</Text>
-                        <Text style={styles.modalDesc}>Ask customer for PIN</Text>
-                        <TextInput
-                            style={styles.otpInput}
-                            placeholder="0 0 0 0 0 0"
-                            keyboardType="numeric"
-                            maxLength={6}
-                            value={deliveryOtp}
-                            onChangeText={setDeliveryOtp}
-                        />
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setModalVisible(false)}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.verifyBtn} onPress={handleCompleteDelivery}>
-                                <Text style={styles.verifyText}>Verify</Text>
-                            </TouchableOpacity>
-                        </View>
+        <LinearGradient
+            colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+            style={styles.gradientContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+        >
+            <SafeAreaView style={styles.safeArea}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 30}
+                    style={{ flex: 1 }}
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={normalize(24)} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Delivery Partner</Text>
+                        <View style={{ width: 24 }} />
                     </View>
-                </View>
-            </Modal>
-        </SafeAreaView>
+
+                    {loading ? (
+                        <View style={styles.centerContainer}><ActivityIndicator size="large" color="#E50914" /></View>
+                    ) : (
+                        <View style={{ flex: 1 }}>
+                            {partnerStatus === 'unregistered' && renderRegistration()}
+                            {partnerStatus === 'pending' && renderPending()}
+                            {partnerStatus === 'approved' && renderDashboard()}
+                        </View>
+                    )}
+
+                    {/* OTP Modal */}
+                    <Modal
+                        animationType="slide"
+                        transparent={true}
+                        visible={modalVisible}
+                        onRequestClose={() => setModalVisible(false)}
+                    >
+                        <View style={styles.modalOverlay}>
+                            <View style={styles.modalContent}>
+                                <Text style={styles.modalTitle}>Complete Delivery</Text>
+                                <Text style={styles.modalDesc}>Ask customer for PIN</Text>
+                                <TextInput
+                                    style={styles.otpInput}
+                                    placeholder="0 0 0 0 0 0"
+                                    keyboardType="numeric"
+                                    maxLength={6}
+                                    value={deliveryOtp}
+                                    onChangeText={setDeliveryOtp}
+                                />
+                                <View style={styles.modalButtons}>
+                                    <TouchableOpacity style={styles.cancelModalBtn} onPress={() => setModalVisible(false)}>
+                                        <Text style={styles.cancelText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.verifyBtn} onPress={handleCompleteDelivery}>
+                                        <Text style={styles.verifyText}>Verify</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f5f5' },
-    header: { backgroundColor: '#212121', padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+    gradientContainer: { flex: 1 },
+    safeArea: { flex: 1 },
+    header: {
+        paddingVertical: hp(2),
+        paddingHorizontal: wp(5),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.3)',
+    },
+    headerTitle: { fontSize: normalize(18), fontWeight: 'bold', color: '#333' },
 
     // Reg Styles
-    regContainer: { padding: 20, alignItems: 'center' },
-    regImage: { width: 120, height: 120, marginBottom: 20 },
-    regTitle: { fontSize: 22, fontWeight: 'bold', color: '#333', marginBottom: 10 },
-    regSubtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 30 },
+    regContainer: { padding: wp(5), alignItems: 'center' },
+    glassCard: {
+        width: '100%',
+        backgroundColor: 'rgba(255,255,255,0.85)',
+        borderRadius: 20,
+        padding: wp(6),
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    regImage: { width: wp(30), height: wp(30), marginBottom: hp(2) },
+    regTitle: { fontSize: normalize(20), fontWeight: 'bold', color: '#333', marginBottom: hp(1) },
+    regSubtitle: { fontSize: normalize(14), color: '#666', textAlign: 'center', marginBottom: hp(3) },
     formContainer: { width: '100%' },
-    inputLabel: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8, marginTop: 15 },
-    input: { backgroundColor: '#fff', padding: 15, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', fontSize: 16 },
+    inputLabel: { fontSize: normalize(14), fontWeight: 'bold', color: '#333', marginBottom: hp(1), marginTop: hp(2) },
+    input: { backgroundColor: '#fff', padding: wp(3.5), borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)', fontSize: normalize(15) },
     vehicleOptions: { flexDirection: 'row', justifyContent: 'space-between' },
-    vehicleBtn: { flex: 1, backgroundColor: '#eee', padding: 10, borderRadius: 8, alignItems: 'center', marginHorizontal: 5 },
-    vehicleBtnActive: { backgroundColor: '#212121' },
-    vehicleText: { fontSize: 12, fontWeight: 'bold', marginTop: 5, color: '#555' },
+    vehicleBtn: { flex: 1, backgroundColor: '#f0f0f0', padding: wp(3), borderRadius: 10, alignItems: 'center', marginHorizontal: 5 },
+    vehicleBtnActive: { backgroundColor: '#333' },
+    vehicleText: { fontSize: normalize(10), fontWeight: 'bold', marginTop: 5, color: '#555' },
     vehicleTextActive: { color: '#fff' },
-    submitBtn: { backgroundColor: '#E50914', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 30 },
-    submitBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+    submitBtn: { backgroundColor: '#E50914', padding: hp(1.8), borderRadius: 12, alignItems: 'center', marginTop: hp(4) },
+    submitBtnText: { color: '#fff', fontWeight: 'bold', fontSize: normalize(16) },
 
     // Pending Styles
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
-    pendingTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 20, color: '#333' },
-    pendingText: { textAlign: 'center', color: '#666', marginTop: 10, lineHeight: 22 },
-    refreshBtn: { marginTop: 20, padding: 10 },
-    refreshText: { color: '#E50914', fontWeight: 'bold' },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: wp(5) },
+    pendingTitle: { fontSize: normalize(18), fontWeight: 'bold', marginTop: hp(2), color: '#333' },
+    pendingText: { textAlign: 'center', color: '#666', marginTop: hp(1), lineHeight: normalize(22) },
+    refreshBtn: { marginTop: hp(3), padding: 10 },
+    refreshText: { color: '#E50914', fontWeight: 'bold', fontSize: normalize(15) },
 
     // Dashboard Styles
-    dashHeader: { backgroundColor: '#fff', padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#eee' },
-    welcomeText: { fontSize: 16, fontWeight: 'bold' },
-    statusText: { fontSize: 12, color: '#666' },
-    statsRow: { flexDirection: 'row', backgroundColor: '#fff', marginBottom: 10 },
-    statBox: { flex: 1, alignItems: 'center', padding: 15 },
-    statNum: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-    statLabel: { fontSize: 12, color: '#999' },
-    tabs: { flexDirection: 'row', backgroundColor: '#fff', marginBottom: 10 },
-    tab: { flex: 1, padding: 15, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+    dashHeader: {
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        padding: wp(5),
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.3)'
+    },
+    welcomeText: { fontSize: normalize(16), fontWeight: 'bold', color: '#333' },
+    statusText: { fontSize: normalize(12), color: '#666' },
+    statsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.4)', marginBottom: hp(2), marginHorizontal: wp(4), borderRadius: 12, marginTop: hp(2) },
+    statBox: { flex: 1, alignItems: 'center', padding: wp(4) },
+    statNum: { fontSize: normalize(18), fontWeight: 'bold', color: '#333' },
+    statLabel: { fontSize: normalize(12), color: '#666' },
+    tabs: { flexDirection: 'row', backgroundColor: 'transparent', marginBottom: hp(2), paddingHorizontal: wp(4) },
+    tab: { flex: 1, padding: hp(1.5), alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'rgba(0,0,0,0.1)' },
     activeTab: { borderBottomColor: '#E50914' },
-    tabText: { fontWeight: '600', color: '#999' },
+    tabText: { fontWeight: '600', color: '#888', fontSize: normalize(14) },
     activeTabText: { color: '#E50914' },
 
     // Offline
-    offlineContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    offlineText: { fontSize: 18, fontWeight: 'bold', color: '#555', marginTop: 15 },
+    offlineContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: hp(10) },
+    offlineText: { fontSize: normalize(18), fontWeight: 'bold', color: '#555', marginTop: hp(2) },
     offlineSubText: { color: '#999', marginTop: 5 },
 
     // List & Cards
-    list: { padding: 15 },
-    card: { backgroundColor: '#fff', borderRadius: 10, padding: 15, marginBottom: 15, elevation: 2 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-    orderId: { fontWeight: 'bold', fontSize: 16 },
-    statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5 },
-    statusBadgeText: { fontSize: 10, fontWeight: 'bold' },
-    addressContainer: { backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8, marginBottom: 15 },
+    list: { paddingHorizontal: wp(4), paddingBottom: hp(10) },
+    card: {
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderRadius: 16,
+        padding: wp(4),
+        marginBottom: hp(2),
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+    },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp(1.5) },
+    orderId: { fontWeight: 'bold', fontSize: normalize(15), color: '#333' },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    statusBadgeText: { fontSize: normalize(10), fontWeight: 'bold' },
+    addressContainer: { backgroundColor: '#f9f9f9', padding: wp(3), borderRadius: 10, marginBottom: hp(2) },
     locationRow: { flexDirection: 'row' },
-    locationText: { marginLeft: 10, flex: 1 },
-    customerName: { fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
-    address: { fontSize: 13, color: '#666', marginBottom: 4 },
-    phone: { fontSize: 13, color: '#007AFF', fontWeight: 'bold' },
+    locationText: { marginLeft: wp(3), flex: 1 },
+    customerName: { fontWeight: 'bold', fontSize: normalize(13), marginBottom: 4, color: '#333' },
+    address: { fontSize: normalize(12), color: '#666', marginBottom: 4, lineHeight: normalize(18) },
+    phone: { fontSize: normalize(12), color: '#007AFF', fontWeight: 'bold' },
     actionContainer: { flexDirection: 'row', alignItems: 'center' },
-    acceptBtn: { backgroundColor: '#212121', flex: 1, padding: 12, borderRadius: 5, alignItems: 'center' },
-    statusBtn: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#333', padding: 12, borderRadius: 5, alignItems: 'center', marginRight: 10 },
-    statusBtnText: { fontWeight: 'bold', color: '#333' },
-    completeBtn: { flex: 1, backgroundColor: '#4CAF50', padding: 12, borderRadius: 5, alignItems: 'center' },
-    btnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-    mapBtn: { marginLeft: 15 },
-    emptyContainer: { alignItems: 'center', marginTop: 50 },
-    emptyText: { color: '#999' },
+    acceptBtn: { backgroundColor: '#333', flex: 1, padding: hp(1.5), borderRadius: 8, alignItems: 'center' },
+    statusBtn: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#333', padding: hp(1.5), borderRadius: 8, alignItems: 'center', marginRight: wp(2) },
+    statusBtnText: { fontWeight: 'bold', color: '#333', fontSize: normalize(12) },
+    completeBtn: { flex: 1, backgroundColor: '#4CAF50', padding: hp(1.5), borderRadius: 8, alignItems: 'center' },
+    btnText: { color: '#fff', fontWeight: 'bold', fontSize: normalize(12) },
+    mapBtn: { marginLeft: wp(3) },
+    emptyContainer: { alignItems: 'center', marginTop: hp(5) },
+    emptyText: { color: '#999', fontSize: normalize(14) },
 
     // Modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-    modalContent: { backgroundColor: '#fff', width: '80%', padding: 25, borderRadius: 15, alignItems: 'center' },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-    modalDesc: { color: '#666', marginBottom: 20 },
-    otpInput: { borderBottomWidth: 2, borderBottomColor: '#E50914', width: '80%', textAlign: 'center', fontSize: 24, padding: 10, marginBottom: 30, letterSpacing: 8 },
+    modalContent: { backgroundColor: '#fff', width: '85%', padding: wp(8), borderRadius: 20, alignItems: 'center' },
+    modalTitle: { fontSize: normalize(18), fontWeight: 'bold', marginBottom: hp(1) },
+    modalDesc: { color: '#666', marginBottom: hp(3) },
+    otpInput: { borderBottomWidth: 2, borderBottomColor: '#E50914', width: '80%', textAlign: 'center', fontSize: normalize(24), padding: 10, marginBottom: hp(4), letterSpacing: 8 },
     modalButtons: { flexDirection: 'row', width: '100%', justifyContent: 'space-between' },
     cancelModalBtn: { padding: 10 },
-    verifyBtn: { backgroundColor: '#E50914', paddingVertical: 10, paddingHorizontal: 30, borderRadius: 5 },
-    cancelText: { color: '#777', fontWeight: 'bold' },
-    verifyText: { color: '#fff', fontWeight: 'bold' },
+    verifyBtn: { backgroundColor: '#E50914', paddingVertical: hp(1.5), paddingHorizontal: wp(8), borderRadius: 10 },
+    cancelText: { color: '#777', fontWeight: 'bold', fontSize: normalize(14) },
+    verifyText: { color: '#fff', fontWeight: 'bold', fontSize: normalize(14) },
 });
 
 export default DeliveryDashboardScreen;
