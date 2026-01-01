@@ -21,14 +21,13 @@
       },
       "package": "com.kishokumar1730.reel2cart",
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {},
-    "extra": {
-      "eas": {
-        "projectId": "29e92592-7f24-4061-b552-321312384912"
-      }
-    },
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-video",
@@ -39,6 +38,11 @@
           "locationAlwaysAndWhenInUsePermission": "Allow Reel2Cart to use your location."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f9ab8afe-9fd9-4369-b68e-2aa58b586951"
+      }
+    }
   }
 }
