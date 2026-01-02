@@ -54,7 +54,7 @@ const WelcomeScreen = ({ navigation }) => {
           ]}
         >
           <Image
-            source={require('../assets/app-logo.png')}
+            source={require('../../assets/app-logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -146,3 +146,4 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 });
+

@@ -23,7 +23,6 @@
       },
       "package": "com.kishokumar1730.reel2cart",
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
@@ -38,6 +37,14 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Reel2Cart to use your location."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "ndkVersion": "26.1.10909125"
+          }
         }
       ]
     ],

@@ -78,7 +78,7 @@ const LoginScreen = () => {
                 >
                     <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
                         <View style={styles.container}>
-                            <Image source={require("../assets/simple-logo.png")} style={styles.logo} />
+                            <Image source={require("../../assets/simple-logo.png")} style={styles.logo} />
 
                             <View style={styles.cardContainer}>
                                 <Text style={styles.title}>{t('signInTitle')}</Text>
@@ -308,3 +308,4 @@ const styles = StyleSheet.create({
         marginTop: hp(0.5),
     },
 });
+

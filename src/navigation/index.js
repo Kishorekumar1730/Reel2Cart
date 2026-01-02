@@ -105,7 +105,7 @@ const BottomTabNavigator = () => {
                 shadowRadius: 6,
               }}>
                 <Image
-                  source={require('../assets/app-logo.png')}
+                  source={require('../../assets/app-logo.png')}
                   style={{ width: 55, height: 55, resizeMode: 'contain' }}
                 />
               </View>
@@ -207,3 +207,4 @@ const MainNavigator = () => {
 export default MainNavigator;
 
 const styles = StyleSheet.create({});
+

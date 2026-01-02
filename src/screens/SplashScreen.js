@@ -9,7 +9,7 @@ export default function SplashScreen() {
   const navigation = useNavigation();
   const [nextScreen, setNextScreen] = useState('Language');
 
-  const assetId = require('../assets/custom-splash.mp4');
+  const assetId = require('../../assets/custom-splash.mp4');
 
   const player = useVideoPlayer(assetId, (player) => {
     player.loop = false;
@@ -77,3 +77,4 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
 });
+

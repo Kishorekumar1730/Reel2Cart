@@ -1,0 +1,25 @@
+# Common directories to ignore
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Backend folder (not needed for mobile app build)
+api/
+
+# Android build artifacts
+android/app/build/
+android/.gradle/
+android/app/src/main/assets/index.android.bundle
+
+# iOS build artifacts
+ios/Pods/
+ios/build/
+
+# Local configuration
+.env
+.env.local
+
+# Native projects (Managed Workflow / CNG)
+android/
+ios/

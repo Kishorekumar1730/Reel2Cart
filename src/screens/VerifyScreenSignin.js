@@ -136,7 +136,7 @@ const VerifyScreenSignin = ({ route }) => {
                                             style={styles.logoGradient}
                                         >
                                             <Image
-                                                source={require('../assets/simple-logo.png')}
+                                                source={require('../../assets/simple-logo.png')}
                                                 style={styles.logo}
                                                 resizeMode="contain"
                                             />
@@ -397,3 +397,4 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
 });
+

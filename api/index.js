@@ -39,23 +39,54 @@ app.use(bodyParser.urlencoded({ extended: false, limit: '50mb' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
+// Ensure uploads directory exists (Only if NOT in production/Vercel or use /tmp)
+const uploadDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  try {
+    fs.mkdirSync(uploadDir);
+  } catch (err) {
+    console.log("Skipping upload dir creation (Read-only fs)");
+  }
 }
 
 // Multer Config
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname))
-  }
+// Multer Config
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+let storage;
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  // Cloud Storage
+  storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'reel2cart',
+      allowed_formats: ['jpg', 'png', 'jpeg', 'mp4'],
+      resource_type: 'auto'
+    },
+  });
+} else {
+  // Local Storage (Fallback)
+  storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'uploads/')
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname))
+    }
+  });
+}
+
 const upload = multer({ storage: storage });
+
 
 // Serve Static Files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -65,8 +96,13 @@ app.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-  // Return relative path. Frontend will prepend API_BASE_URL.
-  // This allows the DB to remain valid even if the server IP changes.
+
+  // Cloudinary returns file.path as the secure_url
+  if (req.file.path && req.file.path.startsWith('http')) {
+    return res.status(200).json({ url: req.file.path });
+  }
+
+  // Local storage returns filename
   const relativePath = `uploads/${req.file.filename}`;
   res.status(200).json({ url: relativePath });
 });
@@ -2655,6 +2691,10 @@ app.get("/seller/:id/following", async (req, res) => {
 });
 
 // Start Server
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server is running on port ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
+
+module.exports = app;

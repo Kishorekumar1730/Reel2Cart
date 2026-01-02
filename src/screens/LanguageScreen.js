@@ -62,7 +62,7 @@ const LanguageScreen = ({ route }) => {
 
             <View style={styles.logoContainer}>
               <Image
-                source={require('../assets/simple-logo.png')}
+                source={require('../../assets/simple-logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
@@ -313,3 +313,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+
