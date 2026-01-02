@@ -2690,6 +2690,11 @@ app.get("/seller/:id/following", async (req, res) => {
   }
 });
 
+// Default Route for Health Check
+app.get("/", (req, res) => {
+  res.status(200).send("Reel2Cart Backend is Running 🚀");
+});
+
 // Start Server
 if (require.main === module) {
   app.listen(port, "0.0.0.0", () => {
