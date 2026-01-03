@@ -1,87 +1,127 @@
 import React, { useEffect } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Image, StyleSheet, Dimensions, Animated, Text, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLanguage } from '../context/LanguageContext';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
-  const { t } = useLanguage();
-  const insets = useSafeAreaInsets();
-
   // Animation values
+  const logoScale = new Animated.Value(0.8);
   const fadeAnim = new Animated.Value(0);
-  const scaleAnim = new Animated.Value(0.9);
   const progressAnim = new Animated.Value(0);
 
+  // Fixed Text (Simpler & More Stable)
+  const appName = "Reel2Cart";
+  const tagline = "Future of Shopping";
+
   useEffect(() => {
-    // Start animations
+    // Parallel Start: FadeIn, ScaleUp, and ProgressBar
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1200,
+        duration: 800,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleAnim, {
+      Animated.spring(logoScale, {
         toValue: 1,
-        duration: 1200,
+        friction: 7,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.timing(progressAnim, {
         toValue: 1,
-        duration: 3500,
-        useNativeDriver: false, // width/height don't support native driver
+        duration: 2800, // Finish slightly before navigation
+        useNativeDriver: false, // width/height needs native:false
+        easing: Easing.out(Easing.ease),
       })
-    ]).start();
+    ]).start(() => {
+      // Continuous gentle pulse after entrance
+      startPulse();
+    });
 
     const timer = setTimeout(() => {
       navigation.replace('Home');
-    }, 4000); // 4 seconds for better experience
+    }, 3000);
+
     return () => clearTimeout(timer);
   }, [navigation]);
 
+  const startPulse = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoScale, {
+          toValue: 1.05,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScale, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
   return (
-    <LinearGradient
-      colors={['#F9F9FF', '#E8DFF5', '#CBF1F5']}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.content}>
-        <Animated.View
-          style={[
-            styles.logoContainer,
-            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
-          ]}
-        >
-          <Image
-            source={require('../../assets/app-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
-
-        <Animated.View style={[styles.textContainer, { opacity: fadeAnim }]}>
-          <Text style={styles.welcomeText}>Reel2Cart</Text>
-          <Text style={styles.taglineText}>{t('tagline')}</Text>
-        </Animated.View>
-
-        <View style={[styles.footer, { marginBottom: insets.bottom + 40 }]}>
-          <View style={styles.loaderBarContainer}>
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      <LinearGradient
+        colors={['#FDFBFF', '#E8DFF5', '#CBF1F5']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.background}
+      >
+        <SafeAreaView style={styles.content}>
+          <View style={styles.centerContent}>
             <Animated.View
               style={[
-                styles.loaderBar,
+                styles.logoContainer,
                 {
-                  width: progressAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0%', '100%']
-                  })
+                  opacity: fadeAnim,
+                  transform: [{ scale: logoScale }]
                 }
               ]}
-            />
+            >
+              <Image
+                source={require('../../assets/simple-logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </Animated.View>
+
+            <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
+              <Text style={styles.appName}>{appName}</Text>
+              <Text style={styles.tagline}>{tagline}</Text>
+            </Animated.View>
           </View>
-        </View>
-      </SafeAreaView>
-    </LinearGradient>
+
+          <View style={styles.footer}>
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <Animated.View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%']
+                    })
+                  }
+                ]}
+              />
+            </View>
+
+            <Text style={styles.copyright}>© 2025 Reel2Cart</Text>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
@@ -91,59 +131,70 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  background: {
+    flex: 1,
+  },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  centerContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 50, // Visual offset
   },
   logoContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: height * 0.05,
+    marginBottom: 20,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   logo: {
-    width: width * 0.6,
-    height: width * 0.6,
-    maxWidth: 300,
-    maxHeight: 300,
+    width: width * 0.45,
+    height: width * 0.45,
+    maxWidth: 220,
+    maxHeight: 220,
   },
-  textContainer: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  welcomeText: {
-    fontSize: Math.min(width * 0.1, 42),
+  appName: {
+    fontSize: 32,
     fontWeight: '800',
-    color: '#1A1A1A',
-    letterSpacing: -1,
+    color: '#1F2937', // Dark Gray
+    letterSpacing: 1,
     textAlign: 'center',
   },
-  taglineText: {
-    fontSize: Math.min(width * 0.045, 18),
-    color: '#4A4A4A',
-    marginTop: height * 0.01,
-    textAlign: 'center',
+  tagline: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#6B7280', // Medium Gray
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     fontWeight: '500',
-    opacity: 0.8,
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
+    paddingBottom: 30,
     alignItems: 'center',
+    width: '100%',
   },
-  loaderBarContainer: {
-    width: width * 0.4,
+  progressContainer: {
+    width: width * 0.5, // 50% width
     height: 4,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 2,
+    marginBottom: 15,
     overflow: 'hidden',
   },
-  loaderBar: {
+  progressBar: {
     height: '100%',
-    backgroundColor: '#6366F1',
+    backgroundColor: '#E50914', // Brand Red
     borderRadius: 2,
   },
+  copyright: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '500',
+  }
 });
-

@@ -23,3 +23,22 @@ ios/build/
 # Native projects (Managed Workflow / CNG)
 android/
 ios/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+# Website and Scripts
+legal/
+scripts/
+.vercel/

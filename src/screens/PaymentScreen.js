@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../config/apiConfig';
 import { wp, hp, normalize } from '../utils/responsive';
 import { useLanguage } from '../context/LanguageContext';
 import { useCurrency } from '../context/CurrencyContext';
+import OrderSuccessModal from '../components/OrderSuccessModal';
 
 const PaymentScreen = () => {
     const navigation = useNavigation();
@@ -25,6 +26,7 @@ const PaymentScreen = () => {
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [discountAmount, setDiscountAmount] = useState(0);
+    const [successModalVisible, setSuccessModalVisible] = useState(false);
 
     // Mock Params if not passed
     const totalAmount = route.params?.totalAmount || 1499;
@@ -202,9 +204,7 @@ const PaymentScreen = () => {
             const data = await response.json();
 
             if (response.ok) {
-                Alert.alert(t('success'), t('orderPlaced'), [
-                    { text: t('ok'), onPress: () => navigation.navigate("Home") }
-                ]);
+                setSuccessModalVisible(true);
             } else {
                 Alert.alert(t('error'), data.message || t('failedPlaceOrder'));
             }
@@ -390,6 +390,19 @@ const PaymentScreen = () => {
                         </TouchableOpacity>
                     </View>
                 </KeyboardAvoidingView>
+
+                <OrderSuccessModal
+                    visible={successModalVisible}
+                    message={t('orderPlaced') || "Order Placed Successfully!"}
+                    onClose={() => {
+                        setSuccessModalVisible(false);
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: 'Home' }],
+                        }); // Or navigate to 'Orders'
+                        navigation.navigate('Orders');
+                    }}
+                />
             </SafeAreaView>
         </LinearGradient>
     );

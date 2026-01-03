@@ -8,18 +8,11 @@ import { API_BASE_URL } from '../config/apiConfig';
 
 const NotificationContext = createContext();
 
-if (Constants.executionEnvironment !== 'storeClient' && Constants.appOwnership !== 'expo') {
-    Notifications.setNotificationHandler({
-        handleNotification: async () => ({
-            shouldShowAlert: true,
-            shouldPlaySound: true,
-            shouldSetBadge: false,
-        }),
-    });
-}
+// Helper to determine if running in Expo Go
+const isExpoGo = Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo';
 
 async function registerForPushNotificationsAsync() {
-    if (Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo') {
+    if (isExpoGo) {
         console.log("Push Notifications skipped in Expo Go (Execution Environment check).");
         return null;
     }
@@ -27,21 +20,31 @@ async function registerForPushNotificationsAsync() {
     let token;
 
     if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#FF231F7C',
-        });
+        try {
+            await Notifications.setNotificationChannelAsync('default', {
+                name: 'default',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#FF231F7C',
+            });
+        } catch (error) {
+            console.warn("Failed to set notification channel:", error);
+        }
     }
 
     if (Device.isDevice) {
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
+        let finalStatus;
+        try {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            finalStatus = existingStatus;
 
-        if (existingStatus !== 'granted') {
-            const { status } = await Notifications.requestPermissionsAsync();
-            finalStatus = status;
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+        } catch (error) {
+            console.warn("Error getting notification permissions:", error);
+            return;
         }
 
         if (finalStatus !== 'granted') {
@@ -50,12 +53,6 @@ async function registerForPushNotificationsAsync() {
         }
 
         try {
-            // Check for Expo Go
-            if (Constants.executionEnvironment === 'storeClient') {
-                console.log("Push Notifications restricted in Expo Go. Use Dev Build.");
-                return;
-            }
-
             const projectId = Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId;
             if (!projectId) {
                 console.warn("No projectId found. Skipping push token fetch.");
@@ -85,6 +82,23 @@ export const NotificationProvider = ({ children }) => {
     const notificationListener = useRef();
     const responseListener = useRef();
 
+    // Set Handler Safe for Environment
+    useEffect(() => {
+        if (!isExpoGo) {
+            try {
+                Notifications.setNotificationHandler({
+                    handleNotification: async () => ({
+                        shouldShowAlert: true,
+                        shouldPlaySound: true,
+                        shouldSetBadge: false,
+                    }),
+                });
+            } catch (error) {
+                console.warn("Error setting notification handler:", error);
+            }
+        }
+    }, []);
+
     const fetchNotifications = useCallback(async () => {
         try {
             const storedUser = await AsyncStorage.getItem("userInfo");
@@ -94,9 +108,14 @@ export const NotificationProvider = ({ children }) => {
             const response = await fetch(`${API_BASE_URL}/notifications/${user._id}`);
             if (response.ok) {
                 const data = await response.json();
-                setNotifications(data);
-                const unread = data.filter(n => !n.isRead).length;
-                setUnreadCount(unread);
+                if (Array.isArray(data)) {
+                    setNotifications(data);
+                    const unread = data.filter(n => !n.isRead).length;
+                    setUnreadCount(unread);
+                } else {
+                    setNotifications([]);
+                    setUnreadCount(0);
+                }
             }
         } catch (error) {
             console.error("Notification polling error:", error);
@@ -108,6 +127,8 @@ export const NotificationProvider = ({ children }) => {
     // Push Notification Setup
     useEffect(() => {
         const setupPush = async () => {
+            if (isExpoGo) return; // Completely skip setup in Expo Go
+
             const token = await registerForPushNotificationsAsync();
             if (token) {
                 setExpoPushToken(token);
@@ -131,7 +152,7 @@ export const NotificationProvider = ({ children }) => {
 
         setupPush();
 
-        if (Constants.executionEnvironment !== 'storeClient' && Constants.appOwnership !== 'expo') {
+        if (!isExpoGo) {
             notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
                 fetchNotifications();
             });

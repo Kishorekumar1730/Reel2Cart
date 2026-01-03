@@ -189,6 +189,7 @@ export const translations = {
         orderStatus: "Order Status",
         shippingDetails: "Shipping Details",
         paymentInfo: "Payment Information",
+        cancelOrder: "Cancel Order",
         cancelOrderConfirm: "Are you sure you want to cancel this order?",
         no: "No",
         yesCancel: "Yes, Cancel",
@@ -433,7 +434,7 @@ export const translations = {
         cashOnDelivery: "Cash on Delivery",
         codSub: "Pay at your doorstep",
         paymentMethod: "Payment Method",
-        orderPlaced: "Default payment method updated successfully!",
+        orderPlaced: "Order has been confirmed",
 
         // Seller Orders
         manageOrders: "Manage Orders",
@@ -478,6 +479,7 @@ export const translations = {
         available: "Available",
         loginRequired: "Login Required",
         pleaseLogin: "Please login",
+        watchReel: "Watch Reel",
         error: "Error"
     },
     'العربية': {
@@ -928,7 +930,8 @@ export const translations = {
         failedUpdate: "فشل تحديث الحالة",
         noActiveOrders: "لا توجد طلبات نشطة بعد.",
         newOrdersHint: "ستظهر الطلبات الجديدة هنا فوراً.",
-        totalPayment: "إجمالي الدفع"
+        totalPayment: "إجمالي الدفع",
+        watchReel: "شاهد الفيديو"
     },
     'தமிழ்': {
         continue: "தொடர்க",
@@ -1365,7 +1368,8 @@ export const translations = {
         failedResendOtp: "OTP ஐ மீண்டும் அனுப்புவதில் தோல்வி.",
         loginRequiredTitle: "உள்நுழைவு தேவை",
         loginRequiredFollow: "இந்த விற்பனையாளரைப் பின்தொடர உள்நுழையவும்.",
-        loginRequiredCart: "கூடையில் பொருட்களைச் சேர்க்க உள்நுழையவும்."
+        loginRequiredCart: "கூடையில் பொருட்களைச் சேர்க்க உள்நுழையவும்.",
+        watchReel: "ரீலைப் பார்க்கவும்"
     },
     'తెలుగు': {
         continue: "కొనసాగించు",
@@ -1802,7 +1806,8 @@ export const translations = {
         failedResendOtp: "OTP మళ్ళీ పంపడం విఫలమైంది.",
         loginRequiredTitle: "లాగిన్ అవసరం",
         loginRequiredFollow: "ఈ విక్రేతను అనుసరించడానికి లాగిన్ చేయండి.",
-        loginRequiredCart: "కార్ట్‌లో వస్తువులను చేర్చడానికి లాగిన్ చేయండి."
+        loginRequiredCart: "కార్ట్‌లో వస్తువులను చేర్చడానికి లాగిన్ చేయండి.",
+        watchReel: "రీల్ చూడండి"
     },
     'हिंदी': {
         continue: "जारी रखें",
@@ -2239,7 +2244,8 @@ export const translations = {
         failedResendOtp: "OTP पुनः भेजने में विफल।",
         loginRequiredTitle: "लॉगिन आवश्यक है",
         loginRequiredFollow: "इस विक्रेता को फॉलो करने के लिए लॉगिन करें।",
-        loginRequiredCart: "कार्ट में आइटम जोड़ने के लिए लॉगिन करें।"
+        loginRequiredCart: "कार्ट में आइटम जोड़ने के लिए लॉगिन करें।",
+        watchReel: "रील देखें"
     },
     'മലയാളം': {
         continue: "തുടരുക",
@@ -2645,7 +2651,8 @@ export const translations = {
         failedResendOtp: "OTP വീണ്ടും അയയ്ക്കുന്നതിൽ പരാജയപ്പെട്ടു.",
         loginRequiredTitle: "ലോഗിൻ ആവശ്യമാണ്",
         loginRequiredFollow: "ഈ വിൽപനക്കാരനെ പിന്തുടരാൻ ലോഗിൻ ചെയ്യുക.",
-        loginRequiredCart: "കാർട്ടിലേക്ക് ഇനങ്ങൾ ചേർക്കാൻ ലോഗിൻ ചെയ്യുക."
+        loginRequiredCart: "കാർട്ടിലേക്ക് ഇനങ്ങൾ ചേർക്കാൻ ലೋಗಿನ್ ചെയ്യുക.",
+        watchReel: "റീൽ കാണുക"
     },
     'ಕನ್ನಡ': {
         continue: "ಮುಂದುವರಿಸಿ",
@@ -3116,6 +3123,7 @@ export const translations = {
         available: "ಲಭ್ಯವಿದೆ",
         loginRequired: "ಲಾಗಿನ್ ಅಗತ್ಯವಿದೆ",
         pleaseLogin: "ದಯವಿಟ್ಟು ಲಾಗಿನ್ ಮಾಡಿ",
+        watchReel: "ರೀಲ್ ವೀಕ್ಷಿಸಿ",
         error: "ದೋಷ"
     }
 };

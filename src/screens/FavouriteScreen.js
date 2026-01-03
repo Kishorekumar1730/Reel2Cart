@@ -17,6 +17,25 @@ const FavouriteScreen = () => {
     const [wishlist, setWishlist] = useState([]);
     const [loading, setLoading] = useState(false);
     const [userId, setUserId] = useState(null);
+    const [navigatingId, setNavigatingId] = useState(null);
+
+    const handleProductClick = async (productId) => {
+        if (!productId || navigatingId) return;
+        try {
+            setNavigatingId(productId);
+            const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+            const data = await res.json();
+            if (res.ok) {
+                navigation.navigate('ProductDetails', { product: data });
+            } else {
+                Alert.alert(t('error'), t('productNotFound'));
+            }
+        } catch (error) {
+            console.error("Navigation error:", error);
+        } finally {
+            setNavigatingId(null);
+        }
+    };
 
     useEffect(() => {
         const getUserId = async () => {
@@ -70,10 +89,8 @@ const FavouriteScreen = () => {
     const renderItem = ({ item }) => (
         <TouchableOpacity
             style={styles.card}
-            onPress={() => {
-                // Navigate to product details if implemented, or just show alert
-                // navigation.navigate('ProductDetails', { product: item });
-            }}
+            activeOpacity={0.8}
+            onPress={() => handleProductClick(item.productId)}
         >
             <View style={styles.imageContainer}>
                 <Image source={{ uri: item.image }} style={styles.image} resizeMode="contain" />
@@ -86,7 +103,12 @@ const FavouriteScreen = () => {
             </View>
             <View style={styles.details}>
                 <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.price}>{formatPrice(item.price)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.price}>{formatPrice(item.price)}</Text>
+                    {navigatingId === item.productId && (
+                        <ActivityIndicator size="small" color="#E50914" style={{ marginLeft: 8, marginBottom: 10 }} />
+                    )}
+                </View>
                 <TouchableOpacity style={styles.cartBtn} onPress={() => {
                     // Quick add to cart logic (simplified)
                     Alert.alert("Info", "Go to Home to add to cart or implement quick add here.");
@@ -174,7 +196,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 15,
-        paddingBottom: 100,
+        paddingBottom: 130,
     },
     columnWrapper: {
         justifyContent: 'space-between',

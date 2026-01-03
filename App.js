@@ -1,13 +1,14 @@
 // Refresh
-import { LanguageProvider } from "./src/context/LanguageContext";
-import { CurrencyProvider } from "./src/context/CurrencyContext";
-import { AlertProvider } from "./src/context/AlertContext";
+import { LanguageProvider } from "./src/context/LanguageContext.js";
+import { CurrencyProvider } from "./src/context/CurrencyContext.js";
+import { AlertProvider } from "./src/context/AlertContext.js";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import MainNavigator from "./src/navigation";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { NotificationProvider } from "./src/context/NotificationContext";
+import UpdateManager from "./src/components/UpdateManager";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <NotificationProvider>
             <SafeAreaProvider>
               <MainNavigator />
+              <UpdateManager />
               <StatusBar style="auto" />
             </SafeAreaProvider>
           </NotificationProvider>

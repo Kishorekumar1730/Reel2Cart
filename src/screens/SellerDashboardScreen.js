@@ -50,18 +50,27 @@ const SellerDashboardScreen = () => {
     const { formatPrice } = useCurrency(); // Use global currency formatter
     const { t } = useLanguage();
 
-    const unreadSellerCount = notifications.filter(n =>
+    const unreadSellerCount = Array.isArray(notifications) ? notifications.filter(n =>
         !n.isRead &&
         (['new_order', 'stock_low', 'return_request', 'payout', 'seller_info'].includes(n.type) ||
-            (n.message && n.message.toLowerCase().includes('order')))
-    ).length;
+            (n?.message && n.message.toLowerCase().includes('order')))
+    ).length : 0;
 
+    const [activeTab, setActiveTab] = useState('products'); // 'products' | 'reels'
+
+    // Missing State Definitions
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [sellerId, setSellerId] = useState(null);
     const [sellerInfo, setSellerInfo] = useState(null);
     const [stats, setStats] = useState({ products: 0, earnings: 0, orders: 0, views: 0 });
     const [products, setProducts] = useState([]);
+    const [verificationPending, setVerificationPending] = useState(false);
+    const [sellerId, setSellerId] = useState(null);
+
+    // Initial Alert to confirm update - REMOVED after verification
+    React.useEffect(() => {
+        // setTimeout(() => Alert.alert("Patch Applied", "Seller Dashboard Fixed v4 - OTA Success!"), 500);
+    }, []);
 
     const fetchDashboardData = async (showLoading = false) => {
         try {
@@ -73,7 +82,15 @@ const SellerDashboardScreen = () => {
             const res = await fetch(`${API_BASE_URL}/seller/dashboard/${user._id}`);
             const data = await res.json();
 
+            if (res.status === 403 && data.message === "Seller verification pending") {
+                setVerificationPending(true);
+                setSellerInfo(data.seller);
+                setLoading(false);
+                return;
+            }
+
             if (res.ok) {
+                setVerificationPending(false); // Reset if approved
                 setSellerInfo(data.seller);
                 setStats({
                     products: data.totalProducts || 0,
@@ -137,6 +154,38 @@ const SellerDashboardScreen = () => {
         );
     };
 
+    const handleDeleteProduct = async (itemId) => {
+        Alert.alert(
+            t('delete'),
+            t('confirmRemove'),
+            [
+                { text: t('cancel'), style: "cancel" },
+                {
+                    text: t('delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const res = await fetch(`${API_BASE_URL}/products/${itemId}`, { method: 'DELETE' });
+                            if (res.ok) {
+                                // Remove from local state immediately
+                                setProducts(prev => prev.filter(p => p._id !== itemId));
+                                Alert.alert(t('success'), t('itemDeleted'));
+                            } else {
+                                Alert.alert(t('error'), t('somethingWentWrong'));
+                            }
+                        } catch (error) {
+                            Alert.alert(t('error'), t('networkError'));
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const myProducts = products.filter(p => !p.videoUrl);
+    const myReels = products.filter(p => p.videoUrl);
+    const currentList = activeTab === 'products' ? myProducts : myReels;
+
     const renderProductItem = (item) => (
         <View key={item._id} style={styles.productCard}>
             <Image source={{ uri: item.images[0] }} style={styles.productImage} />
@@ -149,12 +198,20 @@ const SellerDashboardScreen = () => {
                     </Text>
                 </View>
             </View>
-            <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => navigation.navigate('AddProduct', { isEdit: true, product: item, sellerId })}
-            >
-                <MaterialCommunityIcons name="pencil" size={18} color="#FFF" />
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+                <TouchableOpacity
+                    style={[styles.editButton, { marginRight: 8 }]}
+                    onPress={() => navigation.navigate('AddProduct', { isEdit: true, product: item, sellerId, mode: activeTab === 'reels' ? 'reel' : 'product' })}
+                >
+                    <MaterialCommunityIcons name="pencil" size={18} color="#FFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteProduct(item._id)}
+                >
+                    <Ionicons name="trash-outline" size={18} color="#FFF" />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
@@ -162,6 +219,27 @@ const SellerDashboardScreen = () => {
         return (
             <View style={styles.centeredContainer}>
                 <ActivityIndicator size="large" color="#E50914" />
+            </View>
+        );
+    }
+
+    if (verificationPending) {
+        return (
+            <View style={styles.centeredContainer}>
+                <MaterialCommunityIcons name="clock-alert-outline" size={80} color="#F59E0B" />
+                <Text style={{ fontSize: 22, fontWeight: 'bold', marginTop: 20, color: '#1F2937' }}>Verification Pending</Text>
+                <Text style={{ textAlign: 'center', marginHorizontal: 40, marginTop: 10, color: '#6B7280', fontSize: 16 }}>
+                    Your business application for <Text style={{ fontWeight: 'bold' }}>{sellerInfo?.businessName}</Text> is currently under review by our Admin team.
+                </Text>
+                <Text style={{ textAlign: 'center', marginHorizontal: 40, marginTop: 5, color: '#6B7280', fontSize: 14 }}>
+                    This process usually takes 24-48 hours.
+                </Text>
+                <TouchableOpacity
+                    style={[styles.primaryBtn, { marginTop: 30 }]}
+                    onPress={() => navigation.goBack()}
+                >
+                    <Text style={styles.primaryBtnText}>Go Back Home</Text>
+                </TouchableOpacity>
             </View>
         );
     }
@@ -246,24 +324,40 @@ const SellerDashboardScreen = () => {
                         <ActionButton icon="headset-outline" label={t('support')} color="#6366F1" onPress={() => navigation.navigate('SellerSupport', { sellerId })} />
                     </View>
 
-                    {/* Product List */}
+                    {/* Content Tabs */}
+                    <View style={styles.tabContainer}>
+                        <TouchableOpacity
+                            style={[styles.tabButton, activeTab === 'products' && styles.activeTab]}
+                            onPress={() => setActiveTab('products')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>{t('items')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tabButton, activeTab === 'reels' && styles.activeTab]}
+                            onPress={() => setActiveTab('reels')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'reels' && styles.activeTabText]}>{t('reelsTitle') || "Reels"}</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Product/Reel List */}
                     <View style={styles.listHeaderRow}>
-                        <Text style={styles.sectionHeader}>{t('overview')}</Text>
+                        <Text style={styles.sectionHeader}>{activeTab === 'products' ? t('inventory') || "Your Inventory" : t('yourReels') || "Your Reels"}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SellerProfile', { sellerId })}>
                             <Text style={styles.linkText}>{t('viewAll')}</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {products.length === 0 ? (
+                    {currentList.length === 0 ? (
                         <View style={styles.emptyContainer}>
-                            <Ionicons name="cube-outline" size={48} color="#CBD5E1" />
-                            <Text style={styles.emptyText}>{t('inventoryEmpty')}</Text>
-                            <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('AddProduct', { sellerId })}>
-                                <Text style={styles.primaryBtnText}>{t('addProduct')}</Text>
+                            <Ionicons name={activeTab === 'products' ? "cube-outline" : "videocam-outline"} size={48} color="#CBD5E1" />
+                            <Text style={styles.emptyText}>{activeTab === 'products' ? t('inventoryEmpty') : t('noReelsYet') || "No reels yet."}</Text>
+                            <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('AddProduct', { sellerId, mode: activeTab === 'products' ? 'product' : 'reel' })}>
+                                <Text style={styles.primaryBtnText}>{activeTab === 'products' ? t('addProduct') : t('addReel')}</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        products.map((item) => renderProductItem(item))
+                        currentList.map((item) => renderProductItem(item))
                     )}
 
                     <TouchableOpacity style={styles.dangerBtn} onPress={handleDeleteAccount}>
@@ -559,7 +653,43 @@ const styles = StyleSheet.create({
         color: '#9CA3AF',
         fontSize: normalize(12),
         fontWeight: '600'
-    }
+    },
+    // Tabs
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 20,
+    },
+    tabButton: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 10,
+    },
+    activeTab: {
+        backgroundColor: '#E50914',
+    },
+    tabText: {
+        fontSize: normalize(14),
+        fontWeight: '600',
+        color: '#6B7280',
+    },
+    activeTabText: {
+        color: '#FFF',
+        fontWeight: '700',
+    },
+    // Action Row
+    actionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    deleteButton: {
+        padding: 8,
+        backgroundColor: '#EF4444',
+        borderRadius: 12,
+    },
 });
 
 export default SellerDashboardScreen;

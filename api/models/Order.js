@@ -46,6 +46,10 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    currency: {
+        type: String,
+        default: 'INR'
+    },
     shippingAddress: {
         name: String,
         mobileNo: String,

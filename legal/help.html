@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Center - Reel2Cart</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E50914;
+            --secondary: #1a73e8;
+            --text-dark: #1a1a1a;
+            --text-light: #444;
+            --bg: #f5f7f8;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        [dir="rtl"] { text-align: right; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+        }
+        .navbar {
+            background: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logo { font-size: 1.6rem; font-weight: 800; color: var(--primary); text-decoration: none; }
+        .hero {
+            background: linear-gradient(135deg, #E50914 0%, #B20710 100%);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+        }
+        .hero h1 { font-size: 3.5rem; margin: 0; font-weight: 800; letter-spacing: -1.5px; }
+        .hero p { opacity: 0.9; font-size: 1.2rem; margin-top: 15px; }
+        .lang-switcher {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+        .container {
+            max-width: 1000px;
+            margin: -80px auto 100px;
+            padding: 0 20px;
+        }
+        .main-card {
+            background: white;
+            padding: 60px;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+        section { margin-bottom: 60px; }
+        .section-header { display: flex; align-items: center; margin-bottom: 30px; }
+        .icon-circle {
+            width: 50px;
+            height: 50px;
+            background: #fff0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            font-size: 1.5rem;
+        }
+        h2 { font-size: 2.2rem; margin: 0; color: #000; letter-spacing: -0.5px; }
+        h3 { font-size: 1.4rem; color: var(--primary); margin-top: 40px; margin-bottom: 15px; }
+        p { margin-bottom: 20px; color: var(--text-light); font-size: 1.05rem; }
+        .step-list { list-style: none; padding: 0; counter-reset: step; }
+        .step-list li {
+            position: relative;
+            padding-left: 60px;
+            margin-bottom: 30px;
+        }
+        .step-list li::before {
+            content: counter(step);
+            counter-increment: step;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+        .tip-box {
+            background: #f8f9fa;
+            border-left: 5px solid var(--secondary);
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+        footer { background: #000; color: white; padding: 80px 20px; text-align: center; }
+        .contact-btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 700;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        .contact-btn:hover { transform: scale(1.05); }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.2rem; }
+            .main-card { padding: 30px; border-radius: 20px; }
+            h2 { font-size: 1.6rem; }
+            .navbar { padding: 15px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="#" class="logo">Reel2Cart</a>
+        <select class="lang-switcher" id="langSelect" onchange="switchLang(this.value)">
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+            <option value="hi">हिंदी</option>
+            <option value="ta">தமிழ்</option>
+            <option value="te">తెలుగు</option>
+            <option value="ml">മലയാളം</option>
+            <option value="kn">ಕನ್ನಡ</option>
+        </select>
+    </nav>
+
+    <div class="hero">
+        <h1 id="heroTitle">How can we help?</h1>
+        <p id="heroSub">Explore our detailed guides to get the most out of Reel2Cart.</p>
+    </div>
+
+    <div class="container">
+        <div class="main-card" id="contentArea">
+            <!-- Content Injected -->
+        </div>
+    </div>
+
+    <footer>
+        <h2>Still have questions?</h2>
+        <p>Our support team is available 24/7 to help you.</p>
+        <a href="mailto:shopflix2025@gmail.com" class="contact-btn">Email Support</a>
+        <p style="margin-top: 40px; opacity: 0.5;">© 2026 Reel2Cart Platform. Made with ❤️ for India.</p>
+    </footer>
+
+    <script>
+        const translations = {
+            en: {
+                title: "Help Center",
+                heroSub: "Explore our detailed guides to get the most out of Reel2Cart.",
+                content: `
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">👋</div>
+                            <h2>1. Welcome to Reel2Cart</h2>
+                        </div>
+                        <p>Reel2Cart is India's most innovative video-commerce platform. We are changing how you shop online by blending the entertainment of short videos with the convenience of a modern marketplace.</p>
+                        <p>Instead of just looking at static pictures, you can watch reels of products in action, understand their features better, and buy them directly while watching.</p>
+                    </section>
+
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">🛒</div>
+                            <h2>2. How to Shop</h2>
+                        </div>
+                        <p>Shopping on Reel2Cart is designed to be fun and intuitive. Here is the step-by-step process:</p>
+                        <ul class="step-list">
+                            <li>
+                                <strong>Watch the Feed:</strong> Open the "Reels" tab to see a personalized feed of product videos. Scroll up and down to find items you love.
+                            </li>
+                            <li>
+                                <strong>Expand Details:</strong> Tap on the product description to read more about the item, its features, and specifications.
+                            </li>
+                            <li>
+                                <strong>Add to Cart:</strong> Tap the "Add to Cart" button at the bottom of the reel. You can continue watching videos, and your items will be saved in your bag.
+                            </li>
+                            <li>
+                                <strong>Quick Buy:</strong> If you are in a hurry, tap "Buy Now" to go directly to the checkout screen for that specific item.
+                            </li>
+                        </ul>
+                        <div class="tip-box">
+                            <strong>PRO TIP:</strong> Follow your favorite sellers to see their latest product launches first in your feed!
+                        </div>
+                    </section>
+
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">📈</div>
+                            <h2>3. For Sellers (Sell on Reel2Cart)</h2>
+                        </div>
+                        <p>Are you a business owner or a creator? Reel2Cart is the perfect place to reach millions of customers.</p>
+                        <h3>Onboarding</h3>
+                        <p>Go to your Profile and tap on "Work With Reel2Cart". Follow the simple onboarding process to create your business account. You will need to provide your business name and contact details.</p>
+                        <h3>Uploading Reels</h3>
+                        <p>Once you are a verified seller, use the "Add Reel" button on your dashboard. Record or upload a high-quality vertical (9:16) video of your product. Mention the price and stock details clearly.</p>
+                        <div class="tip-box">
+                            <strong>SELLER TIP:</strong> High-quality videos with good lighting and clear explanations sell 5x faster than basic photos!
+                        </div>
+                    </section>
+
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">🛡️</div>
+                            <h2>4. Payments & Security</h2>
+                        </div>
+                        <p>Your security is our priority. We use industry-standard encryption for all transactions.</p>
+                        <ul>
+                            <li><strong>UPI & Cards:</strong> We support Google Pay, PhonePe, Paytm, and all major Debit/Credit cards.</li>
+                            <li><strong>Cash on Delivery (COD):</strong> Available for most pincodes across India. You pay only when you receive the product.</li>
+                            <li><strong>Refunds:</strong> If you cancel an order or return a product, the refund is processed within 5-7 business days to your original payment method.</li>
+                        </ul>
+                    </section>
+                `
+            },
+            hi: {
+                title: "सहायता केंद्र",
+                heroSub: "Reel2Cart का अधिकतम लाभ उठाने के लिए हमारे विस्तृत गाइड देखें।",
+                content: `
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">👋</div>
+                            <h2>1. Reel2Cart में आपका स्वागत है</h2>
+                        </div>
+                        <p>Reel2Cart भारत का सबसे इनोवेटिव वीडियो-कॉमर्स प्लेटफॉर्म है। हम लघु वीडियो के मनोरंजन को आधुनिक मार्केटप्लेस की सुविधा के साथ जोड़कर आपके ऑनलाइन खरीदारी के तरीके को बदल रहे हैं।</p>
+                    </section>
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">🛒</div>
+                            <h2>2. खरीदारी कैसे करें</h2>
+                        </div>
+                        <ul class="step-list">
+                            <li><strong>फीड देखें:</strong> उत्पाद वीडियो की व्यक्तिगत फीड देखने के लिए "रील्स" टैब खोलें।</li>
+                            <li><strong>विवरण देखें:</strong> अधिक जानकारी के लिए विवरण पर टैप करें।</li>
+                            <li><strong>कार्ट में जोड़ें:</strong> "कार्ट में जोड़ें" बटन पर टैप करें।</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">📈</div>
+                            <h2>3. विक्रेताओं के लिए</h2>
+                        </div>
+                        <p>अपना व्यवसाय शुरू करने के लिए अपने प्रोफाइल पर जाएं और "Reel2Cart के साथ काम करें" पर टैप करें। उच्च गुणवत्ता वाले वीडियो अपलोड करें जिन्हें आप बेचना चाहते हैं।</p>
+                    </section>
+                `
+            },
+            ta: {
+              title: "உதவி மையம்",
+              heroSub: "Reel2Cart-ஐ சிறப்பாகப் பயன்படுத்த எங்கள் விரிவான வழிகாட்டிகளை ஆராயுங்கள்.",
+              content: `
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">👋</div>
+                            <h2>1. Reel2Cart-க்கு உங்களை வரவேற்கிறோம்</h2>
+                        </div>
+                        <p>Reel2Cart இந்தியாவின் மிகவும் புதுமையான வீடியோ-காமர்ஸ் தளமாகும்.</p>
+                    </section>
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">🛒</div>
+                            <h2>2. ஷாப்பிங் செய்வது எப்படி</h2>
+                        </div>
+                        <ul class="step-list">
+                            <li><strong>வீடியோக்களைப் பார்க்க:</strong> "ரீல்ஸ்" பகுதிக்குச் செல்லுங்கள்.</li>
+                            <li><strong>கூடையில் சேர்க்க:</strong> "Add to Cart" பட்டனை அழுத்தவும்.</li>
+                        </ul>
+                    </section>
+                `
+            },
+            ar: {
+                title: "مركز المساعدة",
+                dir: "rtl",
+                heroSub: "استكشف أدلةنا التفصيلية لتحقيق أقصى استفادة من Reel2Cart.",
+                content: `
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">👋</div>
+                            <h2>1. مرحباً بكم في Reel2Cart</h2>
+                        </div>
+                        <p>Reel2Cart هي أكثر منصات التجارة عبر الفيديو ابتكاراً في الهند.</p>
+                    </section>
+                    <section>
+                        <div class="section-header">
+                            <div class="icon-circle">🛒</div>
+                            <h2>2. كيفية الشراء</h2>
+                        </div>
+                        <ul class="step-list">
+                            <li><strong>شاهد الخلاصة:</strong> افتح علامة التبويب "Reels" لمشاهدة فيديوهات المنتجات.</li>
+                            <li><strong>أضف إلى السلة:</strong> اضغط على زر "إضافة إلى السلة".</li>
+                        </ul>
+                    </section>
+                `
+            },
+            te: {
+              title: "సహాయ కేంద్రం",
+              content: `<h2>1. పరిచయం</h2><p>Reel2Cart ద్వారా మీరు వీడియోలు చూస్తూ షాపింగ్ చేయవచ్చు.</p>`
+            },
+            ml: {
+              title: "സഹായ കേന്ദ്രം",
+              content: `<h2>1. അറിയേണ്ട കാര്യങ്ങൾ</h2><p>റീലുകൾ കണ്ട് സാധനങ്ങൾ വാങ്ങാൻ റീൽ2കാർട്ട് നിങ്ങളെ സഹായിക്കുന്നു.</p>`
+            },
+            kn: {
+              title: "ಸಹಾಯ ಕೇಂದ್ರ",
+              content: `<h2>1. ಸಹಾಯ ಮಾರ್ಗದರ್ಶಿ</h2><p>ವೀಡಿಯೊಗಳ ಮೂಲಕ ಸುಲಭವಾಗಿ ಖರೀದಿ ಮಾಡಲು ಈ ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ.</p>`
+            }
+        };
+
+        function switchLang(lang) {
+            const data = translations[lang] || translations.en;
+            document.title = data.title + " - Reel2Cart";
+            document.getElementById('heroTitle').innerText = data.title;
+            document.getElementById('heroSub').innerText = data.heroSub || translations.en.heroSub;
+            document.getElementById('contentArea').innerHTML = data.content;
+            document.body.setAttribute('dir', data.dir || "ltr");
+            document.documentElement.lang = lang;
+            
+            const url = new URL(window.location);
+            url.searchParams.set('lang', lang);
+            window.history.pushState({}, '', url);
+        }
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const lang = params.get('lang') || 'en';
+            document.getElementById('langSelect').value = lang;
+            switchLang(lang);
+        };
+    </script>
+</body>
+</html>

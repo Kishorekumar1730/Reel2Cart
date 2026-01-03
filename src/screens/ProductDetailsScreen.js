@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { wp, hp, normalize } from '../utils/responsive';
 import { useCurrency } from '../context/CurrencyContext';
+import { useLanguage } from '../context/LanguageContext';
 import AnimatedButton from '../components/AnimatedButton';
 import { API_BASE_URL } from '../config/apiConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -289,7 +290,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
                     {/* Image Carousel */}
                     <View style={styles.carouselContainer}>
                         <ScrollView
@@ -324,6 +325,28 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                                 color={wishlistIds.has(product._id) ? "#E50914" : "#555"}
                             />
                         </TouchableOpacity>
+
+                        {/* Watch Reel Button */}
+                        {product.videoUrl && (
+                            <TouchableOpacity
+                                style={styles.reelBtn}
+                                activeOpacity={0.9}
+                                onPress={() => navigation.navigate('ReelsScreen', {
+                                    initialReels: [{ ...product, sellerId: seller }],
+                                    initialIndex: 0
+                                })}
+                            >
+                                <LinearGradient
+                                    colors={['#FF416C', '#FF4B2B']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.reelBtnGradient}
+                                >
+                                    <Ionicons name="play" size={20} color="#fff" />
+                                    <Text style={styles.reelBtnText}>{t('watchReel') || 'Watch Reel'}</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* Product Info */}
@@ -916,6 +939,29 @@ const styles = StyleSheet.create({
         color: '#888',
         textDecorationLine: 'line-through',
         marginLeft: 4,
+    },
+    reelBtn: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20, // Changed to left for balance with wishlist on right
+        elevation: 8,
+        shadowColor: '#FF4B2B',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+    },
+    reelBtnGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 25,
+    },
+    reelBtnText: {
+        color: '#fff',
+        fontSize: normalize(14),
+        fontWeight: '700',
+        marginLeft: 6,
     },
 });
 

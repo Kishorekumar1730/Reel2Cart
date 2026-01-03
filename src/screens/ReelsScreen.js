@@ -5,6 +5,8 @@ import {
     TextInput, Modal, Share, KeyboardAvoidingView, Platform,
     TouchableWithoutFeedback, Animated, StatusBar
 } from 'react-native';
+import Reanimated, { LinearTransition } from 'react-native-reanimated';
+
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useFocusEffect, useNavigation, useIsFocused, useRoute } from '@react-navigation/native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
@@ -121,7 +123,12 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
     const [comments, setComments] = useState(item.comments || []);
     const [showComments, setShowComments] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [expanded, setExpanded] = useState(false);
     const heartScale = useRef(new Animated.Value(0)).current;
+
+    const toggleDescription = useCallback(() => {
+        setExpanded(!expanded);
+    }, [expanded]);
 
     // Playback State
     const [manualPause, setManualPause] = useState(false);
@@ -195,30 +202,21 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
     }, [isScreenFocused, checkFollowStatus]);
 
     useEffect(() => {
-        let mounted = true;
-        const managePlayback = () => {
-            if (!mounted) return;
-            try {
-                if (isActive && isScreenFocused && !manualPause) {
-                    player.play();
-                } else {
-                    player.pause();
-                }
-            } catch (error) {
-                // Player might be released or invalid
-            }
-        };
+        if (!player) return;
 
-        managePlayback();
-
-        return () => {
-            mounted = false;
-            try {
+        if (isActive && isScreenFocused) {
+            if (manualPause) {
                 player.pause();
-            } catch (error) {
-                // Ignore if player is already released (prevents crash)
+            } else {
+                player.play();
             }
-        };
+        } else {
+            player.pause();
+            // Optional: Rewind when scrolling away to restart when coming back
+            if (!isActive) { // only reset if moved to another reel
+                player.currentTime = 0;
+            }
+        }
     }, [isActive, isScreenFocused, manualPause, player]);
 
     const toggleLike = async () => {
@@ -402,14 +400,30 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
                         </TouchableOpacity>
 
                         {/* Description */}
-                        <View style={styles.textContainer}>
+                        <Reanimated.View layout={LinearTransition} style={styles.textContainer}>
                             <Text style={styles.itemTitle}>{item.name}</Text>
                             {item.description && (
-                                <Text style={styles.itemDesc} numberOfLines={2}>
-                                    {item.description}
-                                </Text>
+                                <TouchableOpacity
+                                    activeOpacity={1}
+                                    onPress={toggleDescription}
+                                    style={{ marginTop: 4 }}
+                                >
+                                    <Text
+                                        style={styles.itemDesc}
+                                        numberOfLines={expanded ? undefined : 2}
+                                        ellipsizeMode="tail"
+                                    >
+                                        {item.description}
+                                        {!expanded && item.description.length > 60 && '... more'}
+                                    </Text>
+                                    {/* Optional Explicit more/less Indicator if strictly needed 
+                                     <Text style={{color: '#ccc', fontSize: 12}}>
+                                       {expanded ? 'less' : 'more'}
+                                     </Text> 
+                                    */}
+                                </TouchableOpacity>
                             )}
-                        </View>
+                        </Reanimated.View>
 
                         {/* Price & CTA */}
                         <View style={styles.priceRow}>
@@ -459,7 +473,7 @@ const ReelItem = ({ item, isActive, isScreenFocused, userId, navigation }) => {
                                     }
                                 }}
                             >
-                                <Text style={styles.buyButtonText}>{t('shopNow')}</Text>
+                                <Text style={styles.buyButtonText}>{t('addToCart') || 'Add to Cart'}</Text>
                                 <Ionicons name="cart" size={16} color="#000" style={{ marginLeft: 4 }} />
                             </TouchableOpacity>
                         </View>
@@ -569,7 +583,7 @@ const ReelsScreen = () => {
     }).current;
 
     const viewabilityConfig = useRef({
-        itemVisiblePercentThreshold: 50
+        itemVisiblePercentThreshold: 80
     }).current;
 
     useEffect(() => {
@@ -689,8 +703,8 @@ const ReelsScreen = () => {
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={viewabilityConfig}
                 initialNumToRender={1}
-                maxToRenderPerBatch={2}
-                windowSize={3}
+                maxToRenderPerBatch={1}
+                windowSize={2}
                 snapToAlignment="start"
                 decelerationRate="fast"
                 snapToInterval={height}

@@ -10,11 +10,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/apiConfig';
 import { wp, hp, normalize } from '../utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 const SellerProfileScreen = () => {
     const navigation = useNavigation();
+    const route = useRoute();
     const { t } = useLanguage();
     const { sellerId } = route.params;
 
@@ -84,27 +86,46 @@ const SellerProfileScreen = () => {
             return;
         }
 
-        setIsFollowing(!isFollowing);
-        setStats(prev => ({
-            ...prev,
-            followers: isFollowing ? prev.followers - 1 : prev.followers + 1
-        }));
-
         try {
+            // Update local state immediately for snappy feel
+            setIsFollowing(!isFollowing);
+
+            // Update stats immediately
+            setStats(prev => ({
+                ...prev,
+                followers: isFollowing ? prev.followers - 1 : prev.followers + 1
+            }));
+
+            // IMPORTANT: Update the seller object itself so enrichedReels gets the NEW data
+            if (seller) {
+                const updatedFollowers = isFollowing
+                    ? seller.followers.filter(id => String(id) !== String(currentUserId))
+                    : [...(seller.followers || []), currentUserId];
+
+                setSeller({
+                    ...seller,
+                    followers: updatedFollowers
+                });
+            }
+
             const res = await fetch(`${API_BASE_URL}/seller/follow/${sellerId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: currentUserId })
             });
+
             if (!res.ok) {
-                setIsFollowing(!isFollowing);
-                setStats(prev => ({
-                    ...prev,
-                    followers: isFollowing ? prev.followers - 1 : prev.followers + 1
-                }));
+                throw new Error("Failed to follow");
             }
         } catch (error) {
             console.error(error);
+            // Revert on error
+            setIsFollowing(!isFollowing);
+            setStats(prev => ({
+                ...prev,
+                followers: isFollowing ? prev.followers + 1 : prev.followers - 1
+            }));
+            // We won't bother reverting the seller object as it's complex and focus effect will fix it anyway
         }
     };
 
@@ -364,7 +385,7 @@ const SellerProfileScreen = () => {
                         ) : (
                             reels.length > 0 ? (
                                 reels.map((item, index) => (
-                                    <View key={index} style={styles.gridWrapper}>
+                                    <View key={index} style={[styles.gridWrapper, styles.reelsGridWrapper]}>
                                         {renderGridItem({ item, index })}
                                     </View>
                                 ))
@@ -607,23 +628,21 @@ const styles = StyleSheet.create({
     gridContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        paddingHorizontal: wp(2),
+        paddingHorizontal: 0,
     },
     gridWrapper: {
-        width: (width - wp(4)) / 3,
-        height: ((width - wp(4)) / 3) * 1.6, // Portrait Aspect Ratio
-        padding: 4,
+        width: width / 3,
+        height: width / 3, // Default Square for Products
+        padding: 2, // Slight gap to show curved edges
+    },
+    reelsGridWrapper: {
+        height: (width / 3) * 1.5, // 3x3 Portrait for Reels
     },
     gridItem: {
         flex: 1,
         backgroundColor: '#FFF',
-        borderRadius: 12,
+        borderRadius: 12, // Curved edges restored
         overflow: 'hidden',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
     },
     gridImage: {
         width: '100%',

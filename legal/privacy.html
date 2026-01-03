@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Reel2Cart</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E50914;
+            --secondary: #4CAF50;
+            --text-dark: #1a1a1a;
+            --text-light: #555;
+            --bg: #fdfdfd;
+            --card-shadow: 0 10px 40px rgba(0,0,0,0.06);
+        }
+        [dir="rtl"] { text-align: right; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.8;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+        }
+        .navbar {
+            background: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); text-decoration: none; }
+        .hero {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+        .hero h1 { font-size: 3rem; margin: 0; font-weight: 800; }
+        .hero p { opacity: 0.8; font-size: 1.1rem; margin-top: 10px; }
+        .lang-switcher {
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .container {
+            max-width: 900px;
+            margin: -60px auto 100px;
+            background: white;
+            padding: 60px;
+            border-radius: 30px;
+            box-shadow: var(--card-shadow);
+        }
+        .update-date { color: var(--secondary); font-weight: 700; margin-bottom: 40px; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+        section { margin-bottom: 50px; }
+        h2 { font-size: 1.8rem; border-left: 5px solid var(--secondary); padding-left: 20px; margin-bottom: 25px; color: #000; }
+        p { margin-bottom: 20px; color: var(--text-light); }
+        ul { margin-bottom: 20px; color: var(--text-light); padding-left: 20px; }
+        li { margin-bottom: 12px; }
+        footer { background: #1a1a1a; color: white; padding: 60px 20px; text-align: center; }
+        .copyright { opacity: 0.5; font-size: 0.9rem; }
+        @media (max-width: 768px) {
+            .container { padding: 30px; }
+            .hero h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body dir="ltr">
+    <nav class="navbar">
+        <a href="#" class="logo">Reel2Cart</a>
+        <select class="lang-switcher" id="langSelect" onchange="switchLang(this.value)">
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+            <option value="hi">हिंदी</option>
+            <option value="ta">தமிழ்</option>
+            <option value="te">తెలుగు</option>
+            <option value="ml">മലയാളം</option>
+            <option value="kn">ಕನ್ನಡ</option>
+        </select>
+    </nav>
+
+    <div class="hero">
+        <h1 id="heroTitle">Privacy Policy</h1>
+        <p id="heroSub">Your privacy is our top priority. Learn how we handle your data.</p>
+    </div>
+
+    <div class="container" id="contentArea">
+        <!-- Content injected by JS -->
+    </div>
+
+    <footer>
+        <p class="copyright">© 2026 Reel2Cart India. Secure & Trusted Shopping.</p>
+    </footer>
+
+    <script>
+        const translations = {
+            en: {
+                title: "Privacy Policy",
+                heroSub: "Respecting your data, ensuring your security.",
+                content: `
+                    <div class="update-date">Effective Date: January 3, 2026</div>
+                    <section>
+                        <h2>1. Introduction</h2>
+                        <p>At Reel2Cart, we are committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our mobile application and usage of our services. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the application.</p>
+                    </section>
+
+                    <section>
+                        <h2>2. Information We Collect</h2>
+                        <p>We may collect information about you in a variety of ways. The information we may collect on the Application includes:</p>
+                        <h3>Personal Data</h3>
+                        <p>Personally identifiable information, such as your name, shipping address, email address, and telephone number, and demographic information, such as your age, gender, hometown, and interests, that you voluntarily give to us when you register with the Application or when you choose to participate in various activities related to the Application.</p>
+                        <h3>Derivative Data</h3>
+                        <p>Information our servers automatically collect when you access the Application, such as your native actions that are integral to the Application, including liking, re-pining, or commenting on a post, and other interactions with the Application and other users via server log files.</p>
+                    </section>
+
+                    <section>
+                        <h2>3. Use of Your Information</h2>
+                        <p>Having accurate information about you permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you via the Application to:</p>
+                        <ul>
+                            <li>Create and manage your account.</li>
+                            <li>Process your bank or credit card transactions and orders.</li>
+                            <li>Deliver targeted advertising, coupons, newsletters, and other information regarding promotions and the Application to you.</li>
+                            <li>Email you regarding your account or order.</li>
+                            <li>Fulfill and manage purchases, orders, payments, and other transactions related to the Application.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>4. Disclosure of Your Information</h2>
+                        <p>We may share information we have collected about you in certain situations. Your information may be disclosed as follows:</p>
+                        <ul>
+                            <li><strong>By Law or to Protect Rights:</strong> If we believe the release of information about you is necessary to respond to legal process, to investigate or remedy potential violations of our policies, or to protect the rights, property, and safety of others.</li>
+                            <li><strong>Interactions with Other Users:</strong> If you interact with other users of the Application, those users may see your name, profile photo, and descriptions of your activity.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>5. Security of Your Information</h2>
+                        <p>We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.</p>
+                    </section>
+                `
+            },
+            hi: {
+                title: "गोपनीयता नीति",
+                heroSub: "आपके डेटा का सम्मान, आपकी सुरक्षा सुनिश्चित करना।",
+                content: `
+                    <div class="update-date">प्रभावी तिथि: 3 जनवरी, 2026</div>
+                    <section>
+                        <h2>1. परिचय</h2>
+                        <p>Reel2Cart में, हम अपने उपयोगकर्ताओं की गोपनीयता की रक्षा के लिए प्रतिबद्ध हैं। यह नीति बताती है कि हम आपकी जानकारी कैसे एकत्र और उपयोग करते हैं।</p>
+                    </section>
+                    <section>
+                        <h2>2. हमारे द्वारा एकत्रित जानकारी</h2>
+                        <p>हम आपका नाम, ईमेल, पता और मोबाइल नंबर एकत्र कर सकते हैं ताकि आपको बेहतर सेवाएं मिल सकें।</p>
+                    </section>
+                    <section>
+                        <h2>3. आपकी जानकारी का उपयोग</h2>
+                        <p>हम आपकी जानकारी का उपयोग ऑर्डर संसाधित करने, आपके खाते का प्रबंधन करने और आपको नई सुविधाओं के बारे में सूचित करने के लिए करते हैं।</p>
+                    </section>
+                `
+            },
+            ta: {
+                title: "தனியுரிமைக் கொள்கை",
+                heroSub: "உங்கள் தரவை மதிக்கிறோம், உங்கள் பாதுகாப்பை உறுதி செய்கிறோம்.",
+                content: `
+                    <div class="update-date">நடைமுறை தேதி: 3 ஜனவரி, 2026</div>
+                    <section>
+                        <h2>1. அறிமுகம்</h2>
+                        <p>Reel2Cart-ல், பயனர்களின் தனியுரிமையைப் பாதுகாப்பதில் நாங்கள் உறுதியாக உள்ளோம்.</p>
+                    </section>
+                    <section>
+                        <h2>2. நாங்கள் சேகரிக்கும் தகவல்கள்</h2>
+                        <p>உங்கள் பெயர், மின்னஞ்சல், முகவரி மற்றும் தொலைபேசி எண் ஆகியவற்றை நாங்கள் சேகரிக்கிறோம்.</p>
+                    </section>
+                    <section>
+                        <h2>3. தகவல்களின் பயன்பாடு</h2>
+                        <p>ஆர்டர்களைச் செயல்படுத்தவும், சிறந்த ஷாப்பிங் அனுபவத்தை வழங்கவும் உங்கள் தகவல்கள் பயன்படுத்தப்படுகின்றன.</p>
+                    </section>
+                `
+            },
+            ar: {
+                title: "سياسة الخصوصية",
+                dir: "rtl",
+                heroSub: "نحن نحترم بياناتك ونضمن أمنك.",
+                content: `
+                    <div class="update-date">تاريخ النفاذ: 3 يناير 2026</div>
+                    <section>
+                        <h2>1. مقدمة</h2>
+                        <p>في Reel2Cart، نحن ملتزمون بحماية خصوصية مستخدمينا.</p>
+                    </section>
+                    <section>
+                        <h2>2. المعلومات التي نجمعها</h2>
+                        <p>قد نجمع اسمك وعنوانك وبريدك الإلكتروني ورقم هاتفك لمعالجة الطلبات.</p>
+                    </section>
+                `
+            },
+            te: {
+                title: "గోప్యతా విధానం",
+                content: `<h2>1. పరిచయం</h2><p>Reel2Cart లో మీ గోప్యతకు మేము అత్యంత ప్రాముఖ్యత ఇస్తాము.</p>`
+            },
+            ml: {
+                title: "സ്വകാര്യതാ നയം",
+                content: `<h2>1. ആമുഖം</h2><p>നിങ്ങളുടെ വിവരങ്ങൾ സുരക്ഷിതമായി സൂക്ഷിക്കാൻ ഞങ്ങൾ ബാധ്യസ്ഥരാണ്.</p>`
+            },
+            kn: {
+                title: "ಗೌಪ್ಯತಾ ನೀತಿ",
+                content: `<h2>1. ಪೀಠಿಕೆ</h2><p>Reel2Cart ನಲ್ಲಿ ನಿಮ್ಮ ಗೌಪ್ಯತೆಯು ನಮಗೆ ಬಹಳ ಮುಖ್ಯವಾಗಿದೆ.</p>`
+            }
+        };
+
+        function switchLang(lang) {
+            const data = translations[lang] || translations.en;
+            document.title = data.title + " - Reel2Cart";
+            document.getElementById('heroTitle').innerText = data.title;
+            document.getElementById('heroSub').innerText = data.heroSub || translations.en.heroSub;
+            document.getElementById('contentArea').innerHTML = data.content;
+            document.body.setAttribute('dir', data.dir || "ltr");
+            document.documentElement.lang = lang;
+            
+            const url = new URL(window.location);
+            url.searchParams.set('lang', lang);
+            window.history.pushState({}, '', url);
+        }
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const lang = params.get('lang') || 'en';
+            document.getElementById('langSelect').value = lang;
+            switchLang(lang);
+        };
+    </script>
+</body>
+</html>

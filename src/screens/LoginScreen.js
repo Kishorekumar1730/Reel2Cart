@@ -16,6 +16,20 @@ const LoginScreen = () => {
     // Use global language context
     const { t, language } = useLanguage();
 
+    const getLegalUrl = (type) => {
+        const langMap = {
+            'English': 'en',
+            'العربية': 'ar',
+            'हिंदी': 'hi',
+            'தமிழ்': 'ta',
+            'తెలుగు': 'te',
+            'മലയാളം': 'ml',
+            'ಕನ್ನಡ': 'kn'
+        };
+        const langCode = langMap[language] || 'en';
+        return `https://reel2cart-legal.vercel.app/${type}?lang=${langCode}`;
+    };
+
     const isValidInput = (input) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(input);
@@ -111,11 +125,11 @@ const LoginScreen = () => {
 
                                 <Text style={styles.agreeText}>
                                     {t('agreePrefix')}{" "}
-                                    <Text style={styles.link} onPress={() => Linking.openURL("https://example.com/terms")}>
+                                    <Text style={styles.link} onPress={() => Linking.openURL(getLegalUrl('terms'))}>
                                         {t('condition')}
                                     </Text>{" "}
                                     {t('and')}{" "}
-                                    <Text style={styles.link} onPress={() => Linking.openURL("https://example.com/privacy")}>
+                                    <Text style={styles.link} onPress={() => Linking.openURL(getLegalUrl('privacy'))}>
                                         {t('privacyNotice')}
                                     </Text>
                                     .
@@ -136,13 +150,13 @@ const LoginScreen = () => {
                             </AnimatedButton>
 
                             <View style={styles.footer}>
-                                <AnimatedButton onPress={() => Linking.openURL("https://example.com/terms")}>
+                                <AnimatedButton onPress={() => Linking.openURL(getLegalUrl('terms'))}>
                                     <Text style={styles.footerLink}>{t('condition')}</Text>
                                 </AnimatedButton>
-                                <AnimatedButton onPress={() => Linking.openURL("https://example.com/privacy")}>
+                                <AnimatedButton onPress={() => Linking.openURL(getLegalUrl('privacy'))}>
                                     <Text style={styles.footerLink}>{t('privacyNotice')}</Text>
                                 </AnimatedButton>
-                                <AnimatedButton onPress={() => Linking.openURL("https://example.com/help")}>
+                                <AnimatedButton onPress={() => navigation.navigate("Help")}>
                                     <Text style={styles.footerLink}>{t('help')}</Text>
                                 </AnimatedButton>
                             </View>

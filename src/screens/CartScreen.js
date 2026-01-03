@@ -6,6 +6,8 @@ import {
     ScrollView,
     Image,
     Alert,
+    TouchableOpacity,
+    ActivityIndicator,
 } from "react-native";
 import AnimatedButton from "../components/AnimatedButton";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -28,6 +30,25 @@ const CartScreen = () => {
     const [totalAmount, setTotalAmount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [userId, setUserId] = useState(null);
+    const [navigatingId, setNavigatingId] = useState(null);
+
+    const handleProductClick = async (productId) => {
+        if (!productId || navigatingId) return;
+        try {
+            setNavigatingId(productId);
+            const res = await fetch(`${API_BASE_URL}/products/${productId}`);
+            const data = await res.json();
+            if (res.ok) {
+                navigation.navigate('ProductDetails', { product: data });
+            } else {
+                Alert.alert(t('error'), t('productNotFound'));
+            }
+        } catch (error) {
+            console.error("Navigation error:", error);
+        } finally {
+            setNavigatingId(null);
+        }
+    };
 
     // Fetch User ID once
     useEffect(() => {
@@ -258,16 +279,23 @@ const CartScreen = () => {
                                         </AnimatedButton>
                                     </View>
 
-                                    <View style={styles.cardBody}>
+                                    <TouchableOpacity
+                                        style={styles.cardBody}
+                                        onPress={() => handleProductClick(item.productId)}
+                                        activeOpacity={0.7}
+                                    >
                                         <Image source={{ uri: item.image }} style={styles.itemImage} />
                                         <View style={styles.itemInfo}>
                                             <Text numberOfLines={2} style={styles.itemTitle}>{item.name}</Text>
                                             <Text style={styles.itemCategory}>{item.category || 'Product'}</Text>
                                             <View style={styles.priceRow}>
                                                 <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+                                                {navigatingId === item.productId && (
+                                                    <ActivityIndicator size="small" color="#E50914" style={{ marginLeft: 10 }} />
+                                                )}
                                             </View>
                                         </View>
-                                    </View>
+                                    </TouchableOpacity>
 
                                     <View style={styles.cardFooter}>
                                         <View style={styles.qtyContainer}>

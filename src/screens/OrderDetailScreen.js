@@ -145,7 +145,7 @@ const OrderDetailScreen = () => {
                         <View style={styles.divider} />
                         <View style={styles.rowBetween}>
                             <Text style={styles.totalLabel}>{t('totalAmount')}</Text>
-                            <Text style={styles.totalPrice}>{formatPrice(order.totalAmount)}</Text>
+                            <Text style={styles.totalPrice}>{formatPrice(order.totalAmount, order.currency)}</Text>
                         </View>
                     </View>
 
@@ -196,7 +196,7 @@ const OrderDetailScreen = () => {
                                     <Text style={styles.productName} numberOfLines={2}>{prod.name}</Text>
                                     <View style={styles.rowBetween}>
                                         <Text style={styles.productQty}>{t('qty')}: {prod.quantity}</Text>
-                                        <Text style={styles.productPrice}>{formatPrice(prod.price)}</Text>
+                                        <Text style={styles.productPrice}>{formatPrice(prod.price, order.currency)}</Text>
                                     </View>
                                 </View>
                             </View>

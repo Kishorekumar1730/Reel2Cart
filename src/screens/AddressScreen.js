@@ -20,12 +20,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { API_BASE_URL } from "../config/apiConfig"; // Ensure this exists or use context
 import { useLanguage } from "../context/LanguageContext";
+import { useCurrency } from "../context/CurrencyContext";
 import { wp, hp, normalize } from "../utils/responsive";
 
 const AddressScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { t } = useLanguage();
+    const { setCurrencyByCountry } = useCurrency();
     const { source, totalAmount, items } = route.params || {};
     const [addresses, setAddresses] = useState([]);
     const [userId, setUserId] = useState(null);
@@ -82,12 +84,28 @@ const AddressScreen = () => {
             const response = await fetch(`${API_BASE_URL}/addresses/${id}`);
             const data = await response.json();
             if (response.ok) {
-                setAddresses(data.addresses);
+                // sort such that primary is first or handled?
+                // Visual sort: Primary first
+                const sorted = data.addresses.sort((a, b) => (b.isPrimary === true) - (a.isPrimary === true));
+                setAddresses(sorted);
+
+                // Update Currency based on Primary
+                const primary = sorted.find(a => a.isPrimary);
+                if (primary) {
+                    setCurrencyByCountry(primary.country);
+                } else if (sorted.length > 0) {
+                    // Fallback if none primary (legacy data)
+                    setCurrencyByCountry(sorted[0].country);
+                }
+
+                return sorted;
             } else {
                 console.log("Error fetching addresses");
+                return [];
             }
         } catch (error) {
             console.log("Error", error);
+            return [];
         } finally {
             setLoading(false);
         }
@@ -147,6 +165,7 @@ const AddressScreen = () => {
             if (response.ok) {
                 Alert.alert(t('success'), editingAddress ? t('addressUpdated') : t('addressAdded'));
                 fetchAddresses(userId);
+                setCurrencyByCountry(addressData.country); // Update currency based on new address
                 setModalVisible(false);
                 resetForm();
             } else {
@@ -187,8 +206,16 @@ const AddressScreen = () => {
                             method: 'DELETE'
                         });
                         if (response.ok) {
-                            fetchAddresses(userId);
+                            const updatedList = await fetchAddresses(userId);
                             Alert.alert(t('success'), t('addressDeleted') || "Address Deleted");
+
+                            // Currency Update Logic on Delete
+                            if (updatedList && updatedList.length === 0) {
+                                setCurrencyByCountry(null); // Reset to Default (USD)
+                            } else if (updatedList && updatedList.length > 0) {
+                                // Fallback to the last available address
+                                setCurrencyByCountry(updatedList[updatedList.length - 1].country);
+                            }
                         }
                     } catch (error) {
                         console.log("Error deleting", error);
@@ -198,6 +225,26 @@ const AddressScreen = () => {
                 }
             }
         ])
+    };
+
+    const handleSetPrimary = async (address) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/addresses/${address._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: { ...address, isPrimary: true } })
+            });
+            if (response.ok) {
+                Alert.alert(t('success'), t('primaryAddressUpdated') || "Primary address updated");
+                await fetchAddresses(userId);
+                // Currency update handled in fetchAddresses now? No, let's allow fetchAddresses to do it.
+            }
+        } catch (error) {
+            console.log("Error setting primary", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -243,6 +290,11 @@ const AddressScreen = () => {
                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                             <Ionicons name="location" size={20} color="#E50914" style={{ marginRight: 8 }} />
                                             <Text style={styles.nameText}>{item.name}</Text>
+                                            {item.isPrimary && (
+                                                <View style={styles.primaryBadge}>
+                                                    <Text style={styles.primaryText}>{t('primary') || 'Primary'}</Text>
+                                                </View>
+                                            )}
                                         </View>
                                         <View style={styles.actionButtons}>
                                             <Pressable onPress={() => handleEdit(item)} style={styles.iconBtn}>
@@ -265,6 +317,12 @@ const AddressScreen = () => {
                                     </Text>
                                     <Text style={styles.addressText}>{t('mobile')}: {item.mobileNo}</Text>
                                     <Text style={styles.addressText}>{t('pincode')}: {item.postalCode}</Text>
+
+                                    {!item.isPrimary && (
+                                        <Pressable onPress={() => handleSetPrimary(item)} style={styles.setPrimaryBtn}>
+                                            <Text style={styles.setPrimaryText}>{t('setAsPrimary') || 'Set as Primary'}</Text>
+                                        </Pressable>
+                                    )}
 
                                     {source === 'Cart' && (
                                         <Pressable
@@ -636,6 +694,27 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: normalize(16),
         fontWeight: 'bold',
+    },
+    primaryBadge: {
+        backgroundColor: '#E50914',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginLeft: 8
+    },
+    primaryText: {
+        color: '#fff',
+        fontSize: normalize(10),
+        fontWeight: 'bold'
+    },
+    setPrimaryBtn: {
+        marginTop: 10,
+        alignSelf: 'flex-start'
+    },
+    setPrimaryText: {
+        color: '#007AFF',
+        fontWeight: '600',
+        fontSize: normalize(14)
     },
     deliverBtn: {
         backgroundColor: '#FFD814',

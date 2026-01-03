@@ -1,11 +1,17 @@
 {
-    "files.exclude": {
-        "**/.classpath": true,
-        "**/.project": true,
-        "**/.settings": true,
-        "**/.factorypath": true
-    },
     "java.import.exclusions": [
-        "**/node_modules/**"
-    ]
+        "**/node_modules/**",
+        "**/.git/**"
+    ],
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/.git/**": true,
+        "**/android/**": true,
+        "**/ios/**": true
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "**/node_modules": false
+    }
 }

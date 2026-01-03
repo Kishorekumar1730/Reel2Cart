@@ -78,52 +78,73 @@ export const CurrencyProvider = ({ children }) => {
         setCurrency(curr || 'USD');
     };
 
-    const changeRegion = async (newRegion) => {
-        setRegion(newRegion);
-        updateCurrencyForRegion(newRegion.code);
-        await AsyncStorage.setItem("userSelectedRegion", JSON.stringify(newRegion));
-        
-        // Also update backend if user is logged in (Logic moved here from HomeScreen for consistency)
-        // We can do this silently
-        try {
-            const userInfo = await AsyncStorage.getItem("userInfo");
-            if (userInfo) {
-                const user = JSON.parse(userInfo);
-                // We assume API_BASE_URL is available globally or we import it.
-                // Since this is a pure context, let's skip the fetch call here or import config.
-                // It's better to let the screen handle the side effect or import config.
-                // I'll skip the backend sync here to avoid circular deps or config issues, 
-                // the HomeScreen can still handle the backend sync if it wants to observe the change,
-                // OR we can just rely on the local state for the UI.
-            }
-        } catch (e) {}
+    // Map Full Country Name to ISO Code for Currency Lookup
+    const countryNameMap = {
+        'India': 'IN',
+        'United States': 'US',
+        'United Kingdom': 'GB',
+        'Canada': 'CA',
+        'Australia': 'AU',
+        'United Arab Emirates': 'AE',
+        'Germany': 'DE',
+        'France': 'FR',
+        'Japan': 'JP',
+        'China': 'CN',
+        'Brazil': 'BR'
     };
 
-    const formatPrice = (priceInInr) => {
-        if (priceInInr === undefined || priceInInr === null) return '';
-        
-        // If Base is INR (which it is in our DB)
-        // We convert FROM INR TO Target Currency
-        
-        let finalPrice = priceInInr;
+    const changeRegion = async (newRegion) => {
+        setRegion(newRegion);
+        // If switching to Global, reset to USD unless overridden by address later
+        // But for now, basic logic:
+        updateCurrencyForRegion(newRegion.code);
+        await AsyncStorage.setItem("userSelectedRegion", JSON.stringify(newRegion));
+    };
+
+    // New Function to override currency based on Address Country
+    const setCurrencyByCountry = (countryName) => {
+        // Only allow override if we are in 'Global' mode
+        if (region.code === 'Global') {
+            if (!countryName) {
+                setCurrency('USD'); // Reset to default
+                return;
+            }
+            const isoCode = countryNameMap[countryName] || null;
+            if (isoCode) {
+                const curr = countryToCurrency[isoCode];
+                if (curr) setCurrency(curr);
+            }
+        }
+    };
+
+    const formatPrice = (price, overrideCurrency) => {
+        if (price === undefined || price === null) return '';
+
+        // If overrideCurrency is provided, we assume the price is ALREADY in that currency.
+        // We just formatting it with the symbol.
+        if (overrideCurrency) {
+            const sym = getSymbolFromCurrency(overrideCurrency) || overrideCurrency;
+            return `${sym}${parseFloat(price).toFixed(2)}`;
+        }
+
+        // Default Logic: Convert FROM INR (Base) TO Current Context Currency
+        let finalPrice = price;
         let symbol = '₹';
 
         if (currency !== 'INR' && rates[currency]) {
-            finalPrice = priceInInr * rates[currency];
+            finalPrice = price * rates[currency];
             symbol = getSymbolFromCurrency(currency) || currency;
         } else if (currency === 'INR') {
             symbol = '₹';
         } else {
-             // Fallback if rate missing but currency changed (unlikely)
-             symbol = getSymbolFromCurrency(currency) || currency;
+            symbol = getSymbolFromCurrency(currency) || currency;
         }
 
-        // Formatting
         return `${symbol}${finalPrice.toFixed(2)}`;
     };
 
     return (
-        <CurrencyContext.Provider value={{ region, changeRegion, currency, formatPrice, loading }}>
+        <CurrencyContext.Provider value={{ region, changeRegion, currency, formatPrice, loading, setCurrencyByCountry }}>
             {children}
         </CurrencyContext.Provider>
     );

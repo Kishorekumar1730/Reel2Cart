@@ -13,6 +13,7 @@ const Coupon = require('./models/Coupon');
 const Notification = require('./models/Notification');
 const DeliveryPartner = require('./models/DeliveryPartner');
 const Message = require('./models/Message');
+const AppVersion = require('./models/AppVersion');
 const axios = require('axios');
 const multer = require('multer');
 const {
@@ -64,12 +65,34 @@ cloudinary.config({
 let storage;
 if (process.env.CLOUDINARY_CLOUD_NAME) {
   // Cloud Storage
+  // Cloud Storage
   storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-      folder: 'reel2cart',
-      allowed_formats: ['jpg', 'png', 'jpeg', 'mp4'],
-      resource_type: 'auto'
+    params: async (req, file) => {
+      const quality = req.query.quality || 'auto';
+      let transformation = [];
+
+      let width = null;
+      switch (quality) {
+        case '4k': width = 2160; break;
+        case '1080p': width = 1080; break;
+        case '720p': width = 720; break;
+        case '480p': width = 480; break;
+        case '360p': width = 360; break;
+        case '260p': width = 260; break;
+        default: width = null;
+      }
+
+      if (width) {
+        transformation.push({ width: width, crop: "limit" });
+      }
+
+      return {
+        folder: 'reel2cart',
+        allowed_formats: ['jpg', 'png', 'jpeg', 'mp4', 'mov'],
+        resource_type: 'auto',
+        transformation: transformation
+      };
     },
   });
 } else {
@@ -92,19 +115,51 @@ const upload = multer({ storage: storage });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Upload Route
-app.post('/upload', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
-  }
+// Upload Route
+app.post('/upload', (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error("Upload Middleware Error:", err);
+      // specific multer errors
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      return res.status(500).json({ message: "Internal server error during upload", error: err.message });
+    }
 
-  // Cloudinary returns file.path as the secure_url
-  if (req.file.path && req.file.path.startsWith('http')) {
-    return res.status(200).json({ url: req.file.path });
-  }
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
 
-  // Local storage returns filename
-  const relativePath = `uploads/${req.file.filename}`;
-  res.status(200).json({ url: relativePath });
+    // Cloudinary returns file.path as the secure_url
+    // Local storage returns file.path as relative path
+    const url = req.file.path.startsWith('http')
+      ? req.file.path
+      : `${req.protocol}://${req.get('host')}/${req.file.path.replace(/\\/g, "/")}`;
+
+    res.json({ url: url, file: req.file });
+  });
+});
+
+// Generate Cloudinary Signature (For Client-Side Upload)
+app.get('/upload-signature', (req, res) => {
+  try {
+    const timestamp = Math.round((new Date).getTime() / 1000);
+    const signature = cloudinary.utils.api_sign_request({
+      timestamp: timestamp,
+      folder: 'reel2cart',
+    }, process.env.CLOUDINARY_API_SECRET);
+
+    res.json({
+      signature: signature,
+      timestamp: timestamp,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY
+    });
+  } catch (error) {
+    console.error("Error generating signature:", error);
+    res.status(500).json({ message: "Could not generate signature" });
+  }
 });
 
 const jwt = require("jsonwebtoken");
@@ -323,7 +378,7 @@ app.post('/verify-signup', async (req, res) => {
   }
 });
 
-// 3. Login: Email Only (With optional 2FA)
+// 3. Login: Email Only (With optional 2FA or Verification fallback)
 app.post('/login', async (req, res) => {
   const { email, language } = req.body;
 
@@ -337,23 +392,32 @@ app.post('/login', async (req, res) => {
     if (!user) {
       return res.status(400).json({ message: 'User not found' });
     }
-    if (!user.isVerified) {
-      return res.status(400).json({ message: 'Account not verified. Please sign up.' });
-    }
 
-    if (user.twoFactorEnabled) {
+    // Handle Unverified Users or 2FA
+    if (!user.isVerified || user.twoFactorEnabled) {
       const otp = generateOTP();
       user.otp = otp;
-      user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
       await user.save();
+
       await sendOTPEmail(email, otp, language || 'English');
-      return res.status(200).json({ twoFactorRequired: true, message: 'OTP sent for 2FA' });
+
+      const msg = !user.isVerified ? 'Account not verified. OTP sent.' : 'OTP sent for 2FA';
+      return res.status(200).json({ twoFactorRequired: true, message: msg });
     }
 
-    // Direct Login if 2FA disabled
+    // Direct Login if 2FA disabled and Verified
     if (email === 'reel2cart2025@gmail.com' && user.role !== 'admin') {
-      user.role = 'admin';
-      await user.save();
+      user.role = 'user'; // Reset or Keep logic (removed auto-admin to be safe, or keep if intended)
+      // user.role = 'admin'; // Keeping original intention if needed, but let's stick to standard flow
+    }
+
+    // Send Login Alert Email
+    try {
+      const loginHtml = getLoginAlertTemplate(user.name || "User", new Date());
+      await sendEmail(user.email, "Security Alert: New Login to Reel2Cart", loginHtml);
+    } catch (e) {
+      console.error("Failed to send login alert", e);
     }
 
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -364,7 +428,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 4. Verify Login OTP (2FA)
+// 4. Verify Login OTP (2FA or Account Verification)
 app.post('/verify-login', async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -373,31 +437,56 @@ app.post('/verify-login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
+    // Mark verified if this was a verification step
+    if (!user.isVerified) {
+      user.isVerified = true;
+    }
+
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save();
 
+    // Send Login Alert Email
+    try {
+      const loginHtml = getLoginAlertTemplate(user.name || "User", new Date());
+      await sendEmail(user.email, "Security Alert: New Login to Reel2Cart", loginHtml);
+    } catch (e) {
+      console.error("Failed to send login alert", e);
+    }
+
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(200).json({ message: 'Login successful', token, user });
   } catch (error) {
+    console.error("Error in /verify-login", error);
     res.status(500).json({ message: 'Server Error' });
   }
 });
 
 // --- Address Routes ---
 
-// Create a new address
+// Create a new// Address Endpoints
 app.post("/addresses", async (req, res) => {
   try {
     const { userId, address } = req.body;
-    const newAddress = new Address({
-      userId,
-      ...address
-    });
+
+    // Check if this is the first address, if so, make it primary automatically
+    const count = await Address.countDocuments({ userId });
+    let isPrimary = address.isPrimary || false;
+
+    if (count === 0) {
+      isPrimary = true;
+    }
+
+    if (isPrimary) {
+      // Unset other primary addresses
+      await Address.updateMany({ userId }, { isPrimary: false });
+    }
+
+    const newAddress = new Address({ ...address, userId, isPrimary });
     await newAddress.save();
-    res.status(201).json({ message: "Address added successfully", address: newAddress });
+    res.status(200).json({ message: "Address created successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error adding address", error: error.message });
+    res.status(500).json({ message: "Error adding address" });
   }
 });
 
@@ -415,13 +504,18 @@ app.get("/addresses/:userId", async (req, res) => {
 app.put("/addresses/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { address } = req.body;
-    const updatedAddress = await Address.findByIdAndUpdate(id, address, { new: true });
+    const { address } = req.body; // Expects full address object including potential isPrimary
 
-    if (!updatedAddress) {
-      return res.status(404).json({ message: "Address not found" });
+    // Validate if setting primary
+    if (address.isPrimary) {
+      // Find owner of this address to unset their other addresses
+      const existing = await Address.findById(id);
+      if (existing) {
+        await Address.updateMany({ userId: existing.userId }, { isPrimary: false });
+      }
     }
 
+    const updatedAddress = await Address.findByIdAndUpdate(id, address, { new: true });
     res.status(200).json({ message: "Address updated successfully", address: updatedAddress });
   } catch (error) {
     res.status(500).json({ message: "Error updating address", error: error.message });
@@ -525,6 +619,13 @@ app.get("/seller/dashboard/:userId", async (req, res) => {
     const { userId } = req.params;
     const seller = await Seller.findOne({ userId });
     if (!seller) return res.status(404).json({ message: "Seller not found" });
+
+    if (seller.approvalStatus === 'pending' || seller.approvalStatus === 'rejected') {
+      return res.status(403).json({
+        message: "Seller verification pending",
+        seller: seller // Return seller info so frontend can show status
+      });
+    }
 
     // Real-time Aggregations (Earnings, Orders, Views)
     const totalProducts = await Product.countDocuments({ sellerId: seller._id });
@@ -932,10 +1033,34 @@ app.post("/orders", verifyToken, async (req, res) => {
   try {
     const { userId, products, totalAmount, shippingAddress, paymentMethod, paymentId, couponCode } = req.body;
 
+    // Currency & Rates (Mock)
+    const COUNTRY_CURRENCY_MAP = {
+      'India': 'INR', 'USA': 'USD', 'UK': 'GBP', 'Europe': 'EUR', 'UAE': 'AED',
+      'United States': 'USD', 'United Kingdom': 'GBP', 'Germany': 'EUR', 'France': 'EUR'
+    };
+    const EXCHANGE_RATES = {
+      'INR': 1, 'USD': 0.012, 'GBP': 0.0095, 'EUR': 0.011, 'AED': 0.044
+    };
+
+    const getTargetCurrency = (address) => {
+      const country = address?.country || 'India';
+      return COUNTRY_CURRENCY_MAP[country] || 'USD'; // Default Global to USD
+    };
+
+    const convertPrice = (priceInINR, currency) => {
+      if (currency === 'INR') return priceInINR;
+      const rate = EXCHANGE_RATES[currency] || 0.012;
+      return parseFloat((priceInINR * rate).toFixed(2));
+    };
+
     // 1. Transactional Checks
     // Validate User
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Determine Order Currency based on Shipping Address
+    const targetCurrency = getTargetCurrency(shippingAddress);
+    const orderItems = []; // Final items with converted prices
 
     // Validate Stock & Calculate Base Total
     let calculatedBaseTotal = 0;
@@ -944,12 +1069,27 @@ app.post("/orders", verifyToken, async (req, res) => {
       if (!product) return res.status(400).json({ message: `Product not found: ${item.name}` });
       if (product.stock < item.quantity) return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
 
-      // Use price from request for consistency with frontend flow, or DB price for security.
-      // Using DB price is better but if frontend uses special prices not in DB? 
-      // Let's use item.price from body but maybe validate against DB price loosely if needed.
-      // For now: Sum item.price * quantity
-      calculatedBaseTotal += (item.price * item.quantity);
+      // Currency Conversion Logic
+      let finalPrice = product.price; // Base Price (DB)
+
+      // If product allows global sales (Global or same region), apply conversion
+      // We assume Base is INR. If target is different, convert.
+      if (product.country === 'Global' || product.country === 'India') {
+        finalPrice = convertPrice(product.price, targetCurrency);
+      }
+
+      // Add to final order items
+      orderItems.push({
+        ...item,
+        price: finalPrice,
+        currency: targetCurrency
+      });
+
+      calculatedBaseTotal += (finalPrice * item.quantity);
     }
+
+    // Override products with validated converted items
+    const finalProducts = orderItems;
 
     // 2. Coupon Validation & Calculation (Server-side)
     let expectedFinalAmount = calculatedBaseTotal;
@@ -986,51 +1126,30 @@ app.post("/orders", verifyToken, async (req, res) => {
       }
     }
 
-    // Validate Total Amount integrity (allow tiny floating point diff)
-    if (Math.abs(totalAmount - expectedFinalAmount) > 1.0) {
-      // If mismatch, it might be due to delivery charges?
-      // Frontend sends: finalAmount = totalAmount + delivery - discount.
-      // My calcBaseTotal is just items.
-      // We need to account for delivery charge (0 in frontend).
-      // Let's assume delivery is 0 for matching.
-      // If mismatched, we can reject or just warn.
-      // For professional flow: REJECT.
-      console.log(`Price Mismatch: Client sent ${totalAmount}, Server Calc ${expectedFinalAmount} (Base: ${calculatedBaseTotal})`);
-
-      // Important: If Client includes Delivery Charge in totalAmount, but we don't know it here?
-      // Frontend: finalAmount = subTotal - discount. subTotal = total + delivery.
-      // I should probably accept the client's total if it's ABOVE expected (user paying more?) 
-      // or just trust the Coupon logic for the discount amount storage.
-
-      // Let's TRUST the `discountAmount` we calculated for the DB record, 
-      // but maybe allow the `totalAmount` to be what the user agreed to pay.
-      // BUT for Wallet Deduction, we must use the value passed.
-      // If user hacked payload to pay 0?
-      // So we MUST enforce `totalAmount >= expectedFinalAmount`.
-      if (totalAmount < expectedFinalAmount - 1.0) {
-        return res.status(400).json({ message: "Price mismatch. Please try again." });
-      }
-    }
+    // Validate Total Amount integrity
+    // System Auto-Verification: Enforce server calculated total (handling conversion)
+    const finalTotalToCharge = expectedFinalAmount;
 
     // 3. Handle Payment Deduction (Wallet)
     if (paymentMethod === "Reel2Cart Balance") {
-      if (user.walletBalance < totalAmount) {
-        return res.status(400).json({ message: "Insufficient wallet balance" });
+      if (user.walletBalance < finalTotalToCharge) {
+        return res.status(400).json({ message: `Insufficient wallet balance. Required: ${finalTotalToCharge.toFixed(2)}` });
       }
-      user.walletBalance -= totalAmount;
+      user.walletBalance = parseFloat((user.walletBalance - finalTotalToCharge).toFixed(2));
       await user.save();
     }
 
     // 4. Deduct Stock
-    for (const item of products) {
+    for (const item of finalProducts) {
       await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity, views: 1 } });
     }
 
     // 5. Create Order
     const newOrder = new Order({
       userId,
-      products,
-      totalAmount, // This is the final amount paid
+      products: finalProducts,
+      totalAmount: finalTotalToCharge, // This is the final amount paid (Converted)
+      currency: targetCurrency,
       couponCode,
       discountAmount,
       shippingAddress,
@@ -1389,8 +1508,8 @@ app.post("/seller/register", async (req, res) => {
       businessPan: req.body.businessPan?.toUpperCase(),
       additionalProofType: req.body.additionalProofType,
       additionalProofId: req.body.additionalProofId?.toUpperCase(),
-      isVerified: accountType === 'licensed', // Auto-verify licensed for demo, local needs approval
-      approvalStatus: accountType === 'licensed' ? 'approved' : 'pending'
+      isVerified: false, // Force manual verification for all
+      approvalStatus: 'pending' // Force manual verification for all
     });
 
     await newSeller.save();
@@ -1414,7 +1533,7 @@ app.post("/seller/register", async (req, res) => {
     }
 
     res.status(201).json({
-      message: accountType === 'licensed' ? "Seller account created successfully!" : "Application submitted for approval.",
+      message: "Application submitted for verification. Please wait for Admin approval.",
       seller: newSeller
     });
   } catch (error) {
@@ -1993,6 +2112,20 @@ app.put("/products/:id", async (req, res) => {
   }
 });
 
+// Get Single Product by ID
+app.get("/products/:id", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).populate('sellerId', 'businessName sellerName profileImage followers');
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res.json(product);
+  } catch (error) {
+    console.error("Fetch single product error:", error);
+    res.status(500).json({ message: "Error fetching product" });
+  }
+});
+
 // --- NEW SELLER API ENDPOINTS ---
 
 // 1. Support Ticket
@@ -2303,6 +2436,50 @@ app.get("/offers", async (req, res) => {
     res.json(offers);
   } catch (e) {
     res.status(500).json({ message: "Error fetching offers" });
+  }
+});
+
+// --- App Update Management ---
+
+// Get Latest App Version (Public)
+app.get("/app-version", async (req, res) => {
+  try {
+    const { platform } = req.query; // 'android' or 'ios'
+    const query = platform ? { platform } : {};
+
+    // Get latest version
+    const latest = await AppVersion.findOne(query).sort({ createdAt: -1 });
+
+    if (!latest) {
+      // Fallback if no version set
+      return res.json({ version: "1.0.0", forceUpdate: false });
+    }
+
+    res.json(latest);
+  } catch (error) {
+    console.error("Error fetching app version:", error);
+    res.status(500).json({ message: "Error fetching app version" });
+  }
+});
+
+// Set App Version (Admin)
+app.post("/admin/app-version", async (req, res) => {
+  try {
+    const { platform, version, forceUpdate, updateUrl, description } = req.body;
+
+    const newVersion = new AppVersion({
+      platform,
+      version,
+      forceUpdate,
+      updateUrl,
+      description
+    });
+
+    await newVersion.save();
+    res.json({ message: "App version updated", data: newVersion });
+  } catch (error) {
+    console.error("Error setting app version:", error);
+    res.status(500).json({ message: "Error setting app version" });
   }
 });
 
@@ -2693,6 +2870,17 @@ app.get("/seller/:id/following", async (req, res) => {
 // Default Route for Health Check
 app.get("/", (req, res) => {
   res.status(200).send("Reel2Cart Backend is Running 🚀");
+});
+
+// Global 404 Handler - Force JSON
+app.use((req, res, next) => {
+  res.status(404).json({ message: `Route not found: ${req.originalUrl}` });
+});
+
+// Global Error Handler - Force JSON
+app.use((err, req, res, next) => {
+  console.error("Global Error:", err);
+  res.status(500).json({ message: "Internal Server Error", error: err.message });
 });
 
 // Start Server

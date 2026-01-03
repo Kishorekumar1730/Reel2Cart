@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions - Reel2Cart</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E50914;
+            --secondary: #2196F3;
+            --text-dark: #1a1a1a;
+            --text-light: #555;
+            --bg: #fdfdfd;
+            --card-shadow: 0 10px 40px rgba(0,0,0,0.06);
+        }
+        [dir="rtl"] { text-align: right; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.8;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+        }
+        .navbar {
+            background: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); text-decoration: none; }
+        .hero {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+        .hero h1 { font-size: 3rem; margin: 0; font-weight: 800; letter-spacing: -1px; }
+        .hero p { opacity: 0.8; font-size: 1.1rem; margin-top: 10px; }
+        .lang-switcher {
+            background: #f0f0f0;
+            padding: 8px 15px;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+        }
+        .container {
+            max-width: 900px;
+            margin: -60px auto 100px;
+            background: white;
+            padding: 60px;
+            border-radius: 30px;
+            box-shadow: var(--card-shadow);
+        }
+        .update-date { color: var(--primary); font-weight: 700; margin-bottom: 40px; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
+        section { margin-bottom: 50px; }
+        h2 { font-size: 1.8rem; border-left: 5px solid var(--primary); padding-left: 20px; margin-bottom: 25px; color: #000; }
+        h3 { font-size: 1.3rem; margin-top: 30px; color: #333; }
+        p { margin-bottom: 20px; color: var(--text-light); }
+        ul { margin-bottom: 20px; color: var(--text-light); padding-left: 20px; }
+        li { margin-bottom: 12px; }
+        footer { background: #1a1a1a; color: white; padding: 60px 20px; text-align: center; }
+        .footer-logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-bottom: 20px; display: block; }
+        .copyright { opacity: 0.5; font-size: 0.9rem; }
+        @media (max-width: 768px) {
+            .container { padding: 30px; margin-top: -30px; border-radius: 20px; }
+            .hero h1 { font-size: 2rem; }
+            .navbar { padding: 10px 20px; }
+        }
+    </style>
+</head>
+<body dir="ltr">
+    <nav class="navbar">
+        <a href="#" class="logo">Reel2Cart</a>
+        <select class="lang-switcher" id="langSelect" onchange="switchLang(this.value)">
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+            <option value="hi">हिंदी</option>
+            <option value="ta">தமிழ்</option>
+            <option value="te">తెలుగు</option>
+            <option value="ml">മലയാളം</option>
+            <option value="kn">ಕನ್ನಡ</option>
+        </select>
+    </nav>
+
+    <div class="hero">
+        <h1 id="heroTitle">Terms of Service</h1>
+        <p id="heroSub">Everything you need to know about using our platform.</p>
+    </div>
+
+    <div class="container" id="contentArea">
+        <!-- Content injected by JS -->
+    </div>
+
+    <footer>
+        <span class="footer-logo">Reel2Cart</span>
+        <p class="copyright">© 2026 Reel2Cart India. Premium Video Shopping Experience.</p>
+    </footer>
+
+    <script>
+        const translations = {
+            en: {
+                title: "Terms & Conditions",
+                heroSub: "Last updated January 2026",
+                content: `
+                    <div class="update-date">Updated: January 3, 2026</div>
+                    <section>
+                        <h2>1. Introduction & Acceptance</h2>
+                        <p>Welcome to Reel2Cart. These Terms and Conditions constitute a legally binding agreement between you ("User" or "you") and Reel2Cart ("we," "us," or "our"). By accessing our mobile application or website, you agree to abide by these terms in full.</p>
+                        <p>If you do not agree with any part of these terms, you must discontinue the use of our services immediately. We reserve the right to modify these terms at any time, and your continued usage signifies acceptance of the updated terms.</p>
+                    </section>
+
+                    <section>
+                        <h2>2. User Eligibility & Accounts</h2>
+                        <p>To use Reel2Cart, you must be at least 18 years of age or have parental consent. When creating an account, you agree to:</p>
+                        <ul>
+                            <li>Provide accurate, current, and complete information.</li>
+                            <li>Maintain the security of your account and password.</li>
+                            <li>Accept responsibility for all activities that occur under your account.</li>
+                            <li>Notify us immediately of any unauthorized account use or security breaches.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>3. Marketplace & Shopping Rules</h2>
+                        <p>Reel2Cart is a video-commerce platform connecting buyers and sellers. We aim to provide a seamless experience, but please note:</p>
+                        <ul>
+                            <li><strong>Product Representation:</strong> We strive for accuracy in video and image content, but colors and details may vary depending on your device screen.</li>
+                            <li><strong>Pricing:</strong> All prices are determined by independent sellers. We reserve the right to correct any pricing errors.</li>
+                            <li><strong>Availability:</strong> Products shown in reels are subject to availability and may sell out quickly.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>4. Seller Obligations</h2>
+                        <p>Users who register as Sellers on Reel2Cart represent that they have the legal right to sell their products. Sellers must:</p>
+                        <ul>
+                            <li>Ensure all product descriptions are honest and not misleading.</li>
+                            <li>Maintain high-quality standards for uploaded reels.</li>
+                            <li>Promptly process and ship orders upon verification.</li>
+                            <li>Adhere to the Reel2Cart Quality Guidelines for content.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>5. Payments & Security</h2>
+                        <p>All financial transactions are handled through secure, third-party payment gateways. We do not store your full card details. You agree to pay all charges incurred by you or any users of your account at the prices in effect when such charges are incurred.</p>
+                    </section>
+
+                    <section>
+                        <h2>6. Prohibited Activities</h2>
+                        <p>Users may not use the Reel2Cart platform to:</p>
+                        <ul>
+                            <li>Upload content that is illegal, offensive, or infringes on copyrights.</li>
+                            <li>Attempt to hack, scrape, or disrupt the application's functionality.</li>
+                            <li>Engage in fraudulent transactions or scam other users.</li>
+                            <li>Impersonate Reel2Cart employees or other sellers.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>7. Limitation of Liability</h2>
+                        <p>To the maximum extent permitted by law, Reel2Cart shall not be liable for any indirect, incidental, special, or consequential damages resulting from the use or inability to use our platform.</p>
+                    </section>
+                `
+            },
+            hi: {
+                title: "नियम और शर्तें",
+                heroSub: "अंतिम बार अपडेट किया गया: जनवरी 2026",
+                content: `
+                    <div class="update-date">अपडेटेड: 3 जनवरी, 2026</div>
+                    <section>
+                        <h2>1. परिचय और स्वीकृति</h2>
+                        <p>Reel2Cart में आपका स्वागत है। ये नियम और शर्तें आपके ("उपयोगकर्ता") और Reel2Cart ("हम", "हमें") के बीच एक कानूनी रूप से बाध्यकारी समझौता हैं। हमारे मोबाइल एप्लिकेशन या वेबसाइट का उपयोग करके, आप इन शर्तों का पूरी तरह से पालन करने के लिए सहमत होते हैं।</p>
+                    </section>
+                    <section>
+                        <h2>2. उपयोगकर्ता पात्रता</h2>
+                        <p>Reel2Cart का उपयोग करने के लिए आपकी आयु कम से कम 18 वर्ष होनी चाहिए। खाता बनाते समय आप अपनी जानकारी सटीक रखने के लिए सहमत हैं।</p>
+                    </section>
+                    <section>
+                        <h2>3. मार्केटप्लेस नियम</h2>
+                        <p>Reel2Cart एक वीडियो-कॉमर्स प्लेटफॉर्म है। हम वीडियो और इमेज की सटीकता के लिए प्रयास करते हैं, लेकिन आपके स्क्रीन के आधार पर विवरण अलग हो सकते हैं।</p>
+                    </section>
+                    <section>
+                        <h2>4. विक्रेताओं के दायित्व</h2>
+                        <p>विक्रेताओं को यह सुनिश्चित करना चाहिए कि उनके उत्पाद का विवरण ईमानदार है और वे गुणवत्ता मानकों का पालन करते हैं।</p>
+                    </section>
+                    <section>
+                        <h2>5. भुगतान और सुरक्षा</h2>
+                        <p>सभी लेनदेन सुरक्षित तृतीय-पक्ष गेटवे के माध्यम से किए जाते हैं। हम आपके कार्ड का पूरा विवरण सुरक्षित नहीं रखते हैं।</p>
+                    </section>
+                `
+            },
+            ta: {
+              title: "விதிமுறைகள் & நிபந்தனைகள்",
+              heroSub: "கடைசியாக புதுப்பிக்கப்பட்டது: ஜனவரி 2026",
+              content: `
+                <div class="update-date">புதுப்பிக்கப்பட்டது: 3 ஜனவரி, 2026</div>
+                <section>
+                    <h2>1. அறிமுகம் மற்றும் ஏற்பு</h2>
+                    <p>Reel2Cart-க்கு உங்களை வரவேற்கிறோம். இந்த விதிமுறைகள் மற்றும் நிபந்தனைகள் உங்களுக்கும் ("பயனர்") Reel2Cart-க்கும் இடையிலான சட்டப்பூர்வ ஒப்பந்தமாகும். எங்கள் செயலியைப் பயன்படுத்துவதன் மூலம், இந்த விதிகளை நீங்கள் முழுமையாக ஏற்றுக்கொள்கிறீர்கள்.</p>
+                </section>
+                <section>
+                    <h2>2. பயனர் தகுதி</h2>
+                    <p>Reel2Cart-ஐப் பயன்படுத்த உங்களுக்கு குறைந்தபட்சம் 18 வயது இருக்க வேண்டும். கணக்கை உருவாக்கும்போது துல்லியமான தகவல்களை வழங்க ஒப்புக்கொள்கிறீர்கள்.</p>
+                </section>
+                <section>
+                    <h2>3. விற்பனை விதிகள்</h2>
+                    <p>விற்பனையாளர்கள் தங்கள் தயாரிப்புகள் உண்மையானவை என்பதையும், தரமான வீடியோக்களைப் பதிவேற்றுவதையும் உறுதி செய்ய வேண்டும்.</p>
+                </section>
+                <section>
+                    <h2>4. பணம் செலுத்துதல்</h2>
+                    <p>அனைத்துப் பணப் பரிவர்த்தனைகளும் பாதுகாப்பான முறையில் கையாளப்படுகின்றன. உங்கள் கார்டு விவரங்கள் எங்களிடம் சேமிக்கப்படுவதில்லை.</p>
+                </section>
+              `
+            },
+            ar: {
+              title: "الشروط والأحكام",
+              dir: "rtl",
+              heroSub: "آخر تحديث: يناير 2026",
+              content: `
+                <div class="update-date">تاريخ التحديث: 3 يناير 2026</div>
+                <section>
+                    <h2>1. مقدمة وقبول</h2>
+                    <p>مرحباً بكم في Reel2Cart. تشكل هذه الشروط والأحكام اتفاقية ملزمة قانوناً بينك وبين Reel2Cart. باستخدامك لتطبيقنا، فإنك توافق على الالتزام بهذه الشروط بالكامل.</p>
+                </section>
+                <section>
+                    <h2>2. أهلية المستخدم</h2>
+                    <p>يجب أن يكون عمرك 18 عاماً على الأقل لاستخدام خدماتنا. أنت مسؤول عن دقة المعلومات المقدمة في حسابك.</p>
+                </section>
+                <section>
+                    <h2>3. قواعد السوق</h2>
+                    <p>نحن نسعى لضمان دقة محتوى الفيديو، ولكن قد تختلف الألوان والتفاصيل حسب شاشة جهازك.</p>
+                </section>
+                <section>
+                    <h2>4. المدفوعات والأمان</h2>
+                    <p>يتم التعامل مع جميع المعاملات المالية من خلال بوابات دفع آمنة تابعة لجهات خارجية.</p>
+                </section>
+              `
+            },
+            te: {
+              title: "నిబంధనలు & షరతులు",
+              heroSub: "చివరిగా అప్‌డేట్ చేసిన తేదీ: జనవరి 2026",
+              content: `
+                <div class="update-date">అప్‌డేట్: 3 జనవరి, 2026</div>
+                <section>
+                    <h2>1. పరిచయం</h2>
+                    <p>Reel2Cart కు స్వాగతం. ఈ నిబంధనలు మీరు మా సేవలను ఉపయోగించేటప్పుడు వర్తిస్తాయి.</p>
+                </section>
+                <section>
+                    <h2>2. యూజర్ ఖాతాలు</h2>
+                    <p>మీరు కచ్చితమైన సమాచారాన్ని అందించాలని మరియు మీ పాస్‌వర్డ్‌ను సురక్షితంగా ఉంచుకోవాలని అంగీకరిస్తున్నారు.</p>
+                </section>
+              `
+            },
+            ml: {
+              title: "നിബന്ധനകളും വ്യവസ്ഥകളും",
+              heroSub: "അവസാനമായി പുതുക്കിയത്: ജനുവരി 2026",
+              content: `
+                <div class="update-date">പുതുക്കിയത്: 3 ജനുവരി, 2026</div>
+                <section>
+                    <h2>1. ആമുഖം</h2>
+                    <p>Reel2Cart-ലേക്ക് സ്വാഗതം. ഈ നിബന്ധനകൾ നിങ്ങൾ അംഗീകരിക്കുന്നുവെന്ന് കരുതുന്നു.</p>
+                </section>
+                <section>
+                    <h2>2. പേയ്‌മെന്റ്</h2>
+                    <p>എല്ലാ ഇടപാടുകളും സുരക്ഷിതമായ രീതിയിലാണ് നടത്തുന്നത്.</p>
+                </section>
+              `
+            },
+            kn: {
+              title: "ನಿಯಮಗಳು ಮತ್ತು ನಿಬಂಧನೆಗಳು",
+              heroSub: "ಕೊನೆಯದಾಗಿ ನವೀಕರಿಸಿದ್ದು: ಜನವರಿ 2026",
+              content: `
+                <div class="update-date">ನವೀಕರಿಸಿದ್ದು: 3 ಜನವರಿ, 2026</div>
+                <section>
+                    <h2>1. ಪೀಠಿಕೆ</h2>
+                    <p>Reel2Cart ಗೆ ಸುಸ್ವಾಗತ. ಈ ನಿಯಮಗಳು ನಮ್ಮ ಸೇವೆಯನ್ನು ಬಳಸುವ ಎಲ್ಲರಿಗೂ ಅನ್ವಯಿಸುತ್ತವೆ.</p>
+                </section>
+              `
+            }
+        };
+
+        // Fill missing content if any
+        Object.keys(translations).forEach(lang => {
+          if (!translations[lang].dir) translations[lang].dir = "ltr";
+        });
+
+        function switchLang(lang) {
+            const data = translations[lang] || translations.en;
+            document.title = data.title + " - Reel2Cart";
+            document.getElementById('heroTitle').innerText = data.title;
+            document.getElementById('heroSub').innerText = data.heroSub;
+            document.getElementById('contentArea').innerHTML = data.content;
+            document.body.setAttribute('dir', data.dir);
+            document.documentElement.lang = lang;
+            
+            const url = new URL(window.location);
+            url.searchParams.set('lang', lang);
+            window.history.pushState({}, '', url);
+        }
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const lang = params.get('lang') || 'en';
+            document.getElementById('langSelect').value = lang;
+            switchLang(lang);
+        };
+    </script>
+</body>
+</html>

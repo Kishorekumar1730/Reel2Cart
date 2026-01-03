@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import { normalize } from '../utils/responsive';
 
 const { width, height } = Dimensions.get('window');
@@ -9,8 +11,21 @@ const { width, height } = Dimensions.get('window');
 const OrderSuccessModal = ({ visible, message = "Order Placed Successfully!", onClose }) => {
     const scaleValue = useRef(new Animated.Value(0)).current;
 
+    const playSuccessSound = async () => {
+        try {
+            const { sound } = await Audio.Sound.createAsync(
+                // Using a remote simple notification sound as placeholder
+                { uri: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3' }
+            );
+            await sound.playAsync();
+        } catch (error) {
+            console.log("Error playing sound", error);
+        }
+    };
+
     useEffect(() => {
         if (visible) {
+            playSuccessSound();
             // Spring Animation for Checkmark
             Animated.spring(scaleValue, {
                 toValue: 1,
@@ -37,6 +52,13 @@ const OrderSuccessModal = ({ visible, message = "Order Placed Successfully!", on
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
             >
+                <ConfettiCannon
+                    count={200}
+                    origin={{ x: width / 2, y: -10 }}
+                    autoStart={true}
+                    fadeOut={true}
+                />
+
                 <View style={styles.content}>
                     <Animated.View style={[styles.iconCircle, { transform: [{ scale: scaleValue }] }]}>
                         <Ionicons name="checkmark" size={64} color="#10B981" />

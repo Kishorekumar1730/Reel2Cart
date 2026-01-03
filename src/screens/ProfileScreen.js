@@ -4,6 +4,7 @@ import AnimatedButton from '../components/AnimatedButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons, Feather, FontAwesome5 } from '@expo/vector-icons';
+import { Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { wp, hp, normalize } from '../utils/responsive';
@@ -14,7 +15,21 @@ import { API_BASE_URL } from '../config/apiConfig';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+
+    const getLegalUrl = (type) => {
+        const langMap = {
+            'English': 'en',
+            'العربية': 'ar',
+            'हिंदी': 'hi',
+            'தமிழ்': 'ta',
+            'తెలుగు': 'te',
+            'മലയാളം': 'ml',
+            'ಕನ್ನಡ': 'kn'
+        };
+        const langCode = langMap[language] || 'en';
+        return `https://reel2cart-legal.vercel.app/${type}?lang=${langCode}`;
+    };
     const { unreadCount } = useNotifications();
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -157,8 +172,8 @@ const ProfileScreen = () => {
 
                             <View style={styles.sectionContainer}>
                                 <Text style={styles.sectionTitle}>{t('legalSupport')}</Text>
-                                <MenuItem icon="document-text-outline" label={t('terms')} onPress={() => { }} />
-                                <MenuItem icon="shield-checkmark-outline" label={t('privacy')} onPress={() => { }} />
+                                <MenuItem icon="document-text-outline" label={t('terms')} onPress={() => Linking.openURL(getLegalUrl('terms'))} />
+                                <MenuItem icon="shield-checkmark-outline" label={t('privacy')} onPress={() => Linking.openURL(getLegalUrl('privacy'))} />
                                 <MenuItem icon="help-circle-outline" label={t('help')} onPress={() => navigation.navigate('Help')} />
                             </View>
                         </View>
@@ -329,12 +344,12 @@ const ProfileScreen = () => {
                                 <MenuItem
                                     icon="document-text-outline"
                                     label={t('terms')}
-                                    onPress={() => { }}
+                                    onPress={() => Linking.openURL(getLegalUrl('terms'))}
                                 />
                                 <MenuItem
                                     icon="shield-checkmark-outline"
                                     label={t('privacy')}
-                                    onPress={() => { }}
+                                    onPress={() => Linking.openURL(getLegalUrl('privacy'))}
                                 />
                             </View>
 
@@ -362,7 +377,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     scrollContent: {
-        paddingBottom: 110,
+        paddingBottom: 130,
     },
     header: {
         marginHorizontal: 15,

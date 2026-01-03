@@ -35,7 +35,21 @@ const getFaqs = (t) => [
 ];
 
 const HelpScreen = ({ navigation }) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+
+    const getHelpUrl = () => {
+        const langMap = {
+            'English': 'en',
+            'العربية': 'ar',
+            'हिंदी': 'hi',
+            'தமிழ்': 'ta',
+            'తెలుగు': 'te',
+            'മലയാളം': 'ml',
+            'ಕನ್ನಡ': 'kn'
+        };
+        const langCode = langMap[language] || 'en';
+        return `https://reel2cart-legal.vercel.app/help?lang=${langCode}`;
+    };
     const [search, setSearch] = useState('');
     const [expandedIndex, setExpandedIndex] = useState(null);
 
@@ -204,6 +218,14 @@ const HelpScreen = ({ navigation }) => {
                             <Text style={styles.outlineBtnText}>{t('call')}</Text>
                         </TouchableOpacity>
                     </View>
+
+                    <TouchableOpacity
+                        style={[styles.outlineBtn, { width: '100%', marginTop: hp(2), backgroundColor: '#1a1a1a' }]}
+                        onPress={() => Linking.openURL(getHelpUrl())}
+                    >
+                        <Ionicons name="globe-outline" size={normalize(20)} color="#fff" />
+                        <Text style={[styles.outlineBtnText, { color: '#fff' }]}>View Detailed Online Guide</Text>
+                    </TouchableOpacity>
 
                     <View style={{ height: hp(5) }} />
 

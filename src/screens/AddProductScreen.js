@@ -140,6 +140,10 @@ const AddProductScreen = () => {
     const [loading, setLoading] = useState(false);
     const [isCountryPickerVisible, setCountryPickerVisible] = useState(false);
 
+    // Video Upload Config
+    const [uploadQuality, setUploadQuality] = useState('720p');
+    const [showQualityModal, setShowQualityModal] = useState(false);
+
     const pickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
@@ -165,12 +169,23 @@ const AddProductScreen = () => {
         try {
             let result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
-                allowsEditing: true,
+                allowsEditing: true, // System UI might handle trimming but we need raw duration check first? 
+                // With allowsEditing=true, the duration refers to the *edited* video usually.
                 quality: 1,
             });
 
             if (!result.canceled) {
-                setVideoUrl(result.assets[0].uri);
+                const asset = result.assets[0];
+
+                // Duration Check (120 seconds = 120000 ms)
+                // Note: ImagePicker might return duration in ms.
+                if (asset.duration && asset.duration > 120000) {
+                    Alert.alert(t('videoTooLong'), t('videoLimit2Min') || "Video must be under 2 minutes.");
+                    return;
+                }
+
+                setVideoUrl(asset.uri);
+                setTimeout(() => setShowQualityModal(true), 500); // Show quality picker after selection
             }
         } catch (error) {
             console.log("Error picking video:", error);
@@ -220,30 +235,49 @@ const AddProductScreen = () => {
 
             // Check if uploading a new local video (Reel Mode)
             if (isReelMode && videoUrl && !videoUrl.startsWith('http')) {
-                const formData = new FormData();
-                formData.append('file', {
-                    uri: videoUrl,
-                    name: 'upload.mp4', // Simple default name
-                    type: 'video/mp4'
-                });
-
                 try {
-                    const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+                    // 1. Get Signature from Backend
+                    const signRes = await fetch(`${API_BASE_URL}/upload-signature`);
+                    const signData = await signRes.json();
+
+                    if (!signRes.ok) {
+                        throw new Error(signData.message || "Failed to get upload signature");
+                    }
+
+                    const { signature, timestamp, cloudName, apiKey } = signData;
+
+                    // 2. Upload directly to Cloudinary
+                    const formData = new FormData();
+                    formData.append('file', {
+                        uri: videoUrl,
+                        name: `video_${Date.now()}.mp4`,
+                        type: 'video/mp4'
+                    });
+                    formData.append('api_key', apiKey);
+                    formData.append('timestamp', timestamp.toString());
+                    formData.append('signature', signature);
+                    formData.append('folder', 'reel2cart');
+
+                    // Note: Use 'video' resource type endpoint
+                    const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
                         method: 'POST',
                         body: formData,
-                        // Do NOT set Content-Type header for FormData in React Native
-                        // The engine will set it with the correct boundary
+                        headers: {
+                            'Accept': 'application/json',
+                        }
                     });
 
                     const uploadData = await uploadRes.json();
+
                     if (uploadRes.ok) {
-                        finalVideoUrl = uploadData.url;
+                        finalVideoUrl = uploadData.secure_url;
                     } else {
-                        throw new Error(uploadData.message || "Video upload failed");
+                        console.error("Cloudinary Error:", uploadData);
+                        throw new Error(uploadData.error?.message || "Cloudinary upload failed");
                     }
                 } catch (err) {
                     console.error("Upload error:", err);
-                    Alert.alert(t('uploadFailed'), t('couldNotUpload'));
+                    Alert.alert(t('uploadFailed'), err.message || t('couldNotUpload'));
                     setLoading(false);
                     return;
                 }
@@ -473,6 +507,44 @@ const AddProductScreen = () => {
 
                     </ScrollView>
                 </KeyboardAvoidingView>
+
+                {/* Video Quality Picker Modal */}
+                <Modal
+                    visible={showQualityModal}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setShowQualityModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalContent, { height: 'auto', maxHeight: hp(50) }]}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>{t('selectQuality') || "Select Upload Quality"}</Text>
+                                <TouchableOpacity onPress={() => setShowQualityModal(false)}>
+                                    <Ionicons name="close" size={24} color="#333" />
+                                </TouchableOpacity>
+                            </View>
+                            <FlatList
+                                data={['260p', '360p', '480p', '720p', '1080p', '4k']}
+                                keyExtractor={(item) => item}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.qualityItem}
+                                        onPress={() => {
+                                            setUploadQuality(item);
+                                            setShowQualityModal(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.qualityText, uploadQuality === item && styles.qualitySelected]}>
+                                            {item}
+                                        </Text>
+                                        {uploadQuality === item && <Ionicons name="checkmark" size={20} color="#E50914" />}
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+
                 {/* Country Picker Modal */}
                 <Modal
                     visible={isCountryPickerVisible}
@@ -544,6 +616,25 @@ const styles = StyleSheet.create({
         fontSize: normalize(16),
         fontWeight: 'bold',
         color: '#E50914',
+    },
+    // Quality Modal Styles
+    qualityItem: {
+        paddingVertical: 15,
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+    qualityText: {
+        fontSize: normalize(16),
+        color: '#333',
+        fontWeight: '500'
+    },
+    qualitySelected: {
+        color: '#E50914',
+        fontWeight: '700'
     },
     content: {
         padding: wp(5),

@@ -113,12 +113,12 @@ const ALL_COUNTRIES = [
 ];
 
 const CATEGORIES = [
-    { id: 0, key: 'all', icon: 'grid-outline' },
-    { id: 1, key: 'catFashion', icon: 'shirt-outline' },
-    { id: 2, key: 'catElectronics', icon: 'phone-portrait-outline' },
-    { id: 3, key: 'catHome', icon: 'home-outline' },
-    { id: 4, key: 'catBeauty', icon: 'lipstick', type: 'MaterialCommunityIcons' },
-    { id: 5, key: 'catSports', icon: 'football-outline' },
+    { id: 0, key: 'all', value: 'all', icon: 'grid-outline' },
+    { id: 1, key: 'catFashion', value: 'Fashion', icon: 'shirt-outline' },
+    { id: 2, key: 'catElectronics', value: 'Electronics', icon: 'phone-portrait-outline' },
+    { id: 3, key: 'catHome', value: 'Home', icon: 'home-outline' },
+    { id: 4, key: 'catBeauty', value: 'Beauty', icon: 'lipstick', type: 'MaterialCommunityIcons' },
+    { id: 5, key: 'catSports', value: 'Sports', icon: 'football-outline' },
 ];
 
 const SkeletonItem = ({ style }) => {
@@ -247,8 +247,7 @@ const HomeScreen = ({ navigation }) => {
     const [isSearching, setIsSearching] = useState(false);
 
     // Location State
-    // Location State
-    const { region, changeRegion, formatPrice } = useCurrency();
+    const { region, changeRegion, formatPrice, setCurrencyByCountry } = useCurrency();
     const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
     const [countrySearch, setCountrySearch] = useState(''); // New search state
 
@@ -266,7 +265,12 @@ const HomeScreen = ({ navigation }) => {
                 const response = await fetch(`${API_BASE_URL}/addresses/${parsedUser._id}`);
                 const data = await response.json();
                 if (response.ok && data.addresses?.length > 0) {
-                    setSelectedAddress(data.addresses[data.addresses.length - 1]);
+                    const latestAddress = data.addresses[data.addresses.length - 1];
+                    setSelectedAddress(latestAddress);
+                    // Update Currency based on this address if needed (e.g. if we are in Global region but have a localized address)
+                    if (latestAddress.country) {
+                        setCurrencyByCountry(latestAddress.country);
+                    }
                 }
             }
         } catch (error) { console.log(error); }
@@ -289,8 +293,12 @@ const HomeScreen = ({ navigation }) => {
             // Strict check: if code is 'Global', use 'Global'. Else use region.name.
             const countryFilter = region.code === 'Global' ? 'Global' : region.name;
 
+            // Resolve Category Key to Value
+            const selectedCat = CATEGORIES.find(c => c.key === category);
+            const categoryValue = selectedCat ? (selectedCat.value || 'all') : 'all';
+
             let prodUrl = `${API_BASE_URL}/products?country=${countryFilter}`;
-            if (category !== 'all') prodUrl += `&category=${category}`;
+            if (categoryValue !== 'all') prodUrl += `&category=${categoryValue}`;
             prodUrl += '&limit=20';
 
             const [prodRes, offerRes, reelRes] = await Promise.all([
@@ -768,7 +776,7 @@ const HomeScreen = ({ navigation }) => {
                     key={isSearching ? 'search-list' : 'home-list'} // Force re-render on mode switch
                     numColumns={2}
                     columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: wp(2) }}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingBottom: 130 }}
                     showsVerticalScrollIndicator={false}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 
